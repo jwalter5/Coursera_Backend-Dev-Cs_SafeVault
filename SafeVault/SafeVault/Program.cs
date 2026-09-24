@@ -1,32 +1,40 @@
+using Microsoft.Data.Sqlite;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddControllers();
+
+// create and open In-Memory-Database
+var databaseConnection = new SqliteConnection("Data Source=:memory:");
+databaseConnection.Open();
+
+using (var command = databaseConnection.CreateCommand())
+{
+    command.CommandText =
+        """
+        CREATE TABLE IF NOT EXISTS Users (
+            UserID INTEGER PRIMARY KEY AUTOINCREMENT,
+            Username TEXT NOT NULL,
+            Email TEXT NOT NULL
+        );
+        """;
+
+    command.ExecuteNonQuery();
+}
+
+builder.Services.AddSingleton(databaseConnection);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+var defaultFileOptions = new DefaultFilesOptions();
+defaultFileOptions.DefaultFileNames.Clear();
+defaultFileOptions.DefaultFileNames.Add("webform.html");
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.UseDefaultFiles(defaultFileOptions);
+app.UseStaticFiles();
+app.MapControllers();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-});
+// Cleanly close database connection
+app.Lifetime.ApplicationStopping.Register(databaseConnection.Dispose);
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

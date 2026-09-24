@@ -1,6 +1,13 @@
 @SafeVault_HostAddress = http://localhost:5094
 
-GET {{SafeVault_HostAddress}}/weatherforecast/
-Accept: application/json
+GET {{SafeVault_HostAddress}}/
+Accept: text/html
+
+###
+
+POST {{SafeVault_HostAddress}}/submit
+Content-Type: application/x-www-form-urlencoded
+
+username=test-user&email=test%40example.com
 
 ###
