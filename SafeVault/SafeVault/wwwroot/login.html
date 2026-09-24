@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login | SafeVault</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <main class="card">
+        <h1>Login</h1>
+
+        <form action="/login" method="post">
+            <label for="username">Benutzername</label>
+            <input type="text" id="username" name="username" autocomplete="username" required>
+
+            <label for="password">Passwort</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+            <button type="submit">Anmelden</button>
+        </form>
+
+        <a class="back-link" href="/">Zurück zur Homepage</a>
+    </main>
+</body>
+</html>

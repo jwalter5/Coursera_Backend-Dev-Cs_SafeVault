@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using NUnit.Framework;
 using SafeVault.Controllers;
+using SafeVault.Data;
 
 [TestFixture]
 public class TestInputValidation
@@ -19,27 +20,29 @@ public class TestInputValidation
                 CREATE TABLE Users (
                     UserID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Username TEXT NOT NULL,
-                    Email TEXT NOT NULL
+                    Email TEXT NOT NULL,
+                    Password TEXT NOT NULL,
+                    Role TEXT NOT NULL
                 );
 
-                INSERT INTO Users (Username, Email)
-                VALUES ('existingUser', 'existing@example.com');
+                INSERT INTO Users (Username, Email, Password, Role)
+                VALUES ('existingUser', 'existing@example.com', 'password', 'User');
                 """;
             command.ExecuteNonQuery();
         }
 
-        var controller = new AuthenticationController(connection);
+        var controller = new AuthenticationController(new UserRepository(connection));
         var maliciousRequests = new[]
         {
-            new SubmitRequest
+            new LoginRequest
             {
                 Username = "' OR 1=1 --",
-                Email = "attacker@example.com"
+                Password = "password"
             },
-            new SubmitRequest
+            new LoginRequest
             {
                 Username = "attacker",
-                Email = "' OR 1=1 --"
+                Password = "' OR 1=1 --"
             }
         };
 
@@ -47,11 +50,11 @@ public class TestInputValidation
         {
             foreach (var request in maliciousRequests)
             {
-                var result = controller.Login(request) as OkObjectResult;
+                var result = controller.Login(request) as RedirectResult;
 
                 Assert.That(result, Is.Not.Null);
-                Assert.That(result!.Value, Is.EqualTo(false),
-                    $"SQL injection succeeded for username '{request.Username}' and email '{request.Email}'.");
+                Assert.That(result!.Url, Is.EqualTo("/login.html"),
+                    $"SQL injection succeeded for username '{request.Username}' and password '{request.Password}'.");
             }
         });
     }
@@ -69,25 +72,29 @@ public class TestInputValidation
                 CREATE TABLE Users (
                     UserID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Username TEXT NOT NULL,
-                    Email TEXT NOT NULL
+                    Email TEXT NOT NULL,
+                    Password TEXT NOT NULL,
+                    Role TEXT NOT NULL
                 );
                 """;
             command.ExecuteNonQuery();
         }
 
-        var controller = new AuthenticationController(connection);
+        var controller = new AuthenticationController(new UserRepository(connection));
         const string xssPayload = "<script>alert('XSS')</script>";
         var maliciousRequests = new[]
         {
-            new SubmitRequest
+            new RegistrationRequest
             {
                 Username = xssPayload,
-                Email = "attacker@example.com"
+                Email = "attacker@example.com",
+                Password = "password"
             },
-            new SubmitRequest
+            new RegistrationRequest
             {
                 Username = "attacker",
-                Email = $"{xssPayload}@example.com"
+                Email = $"{xssPayload}@example.com",
+                Password = "password"
             }
         };
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
+using SafeVault.Data;
+using SafeVault.Models;
 using SafeVault.Utilities;
 
 namespace SafeVault.Controllers
@@ -8,73 +9,76 @@ namespace SafeVault.Controllers
     [Route("")]
     public class AuthenticationController : ControllerBase
     {
-        private readonly SqliteConnection _connection;
+        private const string DefaultRole = "User";
+        private const string IndexPage = "/index.html";
+        private const string LoginPage = "/login.html";
+        private const string RegisterPage = "/register.html";
+        private readonly UserRepository _userRepository;
 
-        public AuthenticationController(SqliteConnection connection)
+        public AuthenticationController(UserRepository userRepository)
         {
-            _connection = connection;
+            _userRepository = userRepository;
         }
 
         [HttpPost]
         [Route("submit")]
-        public IActionResult CreateUser([FromForm] SubmitRequest request)
+        public IActionResult CreateUser([FromForm] RegistrationRequest request)
         {
-            if (!IsValidRequest(request))
+            if (!IsValidRegistrationRequest(request))
             {
-                return BadRequest("Username or email contains invalid characters.");
+                return Redirect(RegisterPage);
             }
 
-            using var command = _connection.CreateCommand();
-            command.CommandText =
-                """
-                INSERT INTO Users (Username, Email)
-                VALUES ($username, $email);
-                """;
-            command.Parameters.AddWithValue("$username", request.Username);
-            command.Parameters.AddWithValue("$email", request.Email);
-            command.ExecuteNonQuery();
+            _userRepository.Create(new User
+            {
+                Username = request.Username,
+                Email = request.Email,
+                Password = request.Password,
+                Role = DefaultRole
+            });
 
-            return Ok();
+            return Redirect(IndexPage);
         }
 
         [HttpPost]
         [Route("login")]
-        public IActionResult Login([FromForm] SubmitRequest request)
+        public IActionResult Login([FromForm] LoginRequest request)
         {
-            if (!IsValidRequest(request))
+            if (!IsValidLoginRequest(request))
             {
-                return Ok(false);
+                return Redirect(LoginPage);
             }
 
-            using var command = _connection.CreateCommand();
-            command.CommandText =
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM Users
-                    WHERE Username = $username AND Email = $email
-                );
-                """;
-            command.Parameters.AddWithValue("$username", request.Username);
-            command.Parameters.AddWithValue("$email", request.Email);
+            var userExists = _userRepository.GetByCredentials(request.Username, request.Password) is not null;
 
-            var userExists = Convert.ToInt32(command.ExecuteScalar()) == 1;
-
-            return Ok(userExists);
+            return Redirect(userExists ? IndexPage : LoginPage);
         }
 
-        private static bool IsValidRequest(SubmitRequest request)
+        private static bool IsValidRegistrationRequest(RegistrationRequest request)
         {
             return ValidationHelpers.IsValidInput(request.Username, "-_.")
                 && ValidationHelpers.IsValidInput(request.Email, "@._+-")
                 && ValidationHelpers.IsValidXSSInput(request.Username)
                 && ValidationHelpers.IsValidXSSInput(request.Email);
         }
+
+        private static bool IsValidLoginRequest(LoginRequest request)
+        {
+            return ValidationHelpers.IsValidInput(request.Username, "-_.")
+                && ValidationHelpers.IsValidXSSInput(request.Username);
+        }
     }
 
-    public class SubmitRequest
+    public class RegistrationRequest
     {
         public required string Username { get; set; }
         public required string Email { get; set; }
+        public required string Password { get; set; }
+    }
+
+    public class LoginRequest
+    {
+        public required string Username { get; set; }
+        public required string Password { get; set; }
     }
 }

@@ -1,0 +1,70 @@
+:root {
+    color-scheme: light;
+    font-family: system-ui, sans-serif;
+    color: #172033;
+    background: #eef2f7;
+}
+
+body {
+    min-height: 100vh;
+    margin: 0;
+    display: grid;
+    place-items: center;
+}
+
+.card {
+    width: min(100% - 2rem, 28rem);
+    box-sizing: border-box;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    background: white;
+    box-shadow: 0 0.75rem 2rem rgb(23 32 51 / 12%);
+}
+
+h1 {
+    margin-top: 0;
+}
+
+form {
+    display: grid;
+    gap: 0.75rem;
+}
+
+input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #aab4c3;
+    border-radius: 0.4rem;
+    font: inherit;
+}
+
+button,
+.button {
+    padding: 0.75rem 1rem;
+    border: 0;
+    border-radius: 0.4rem;
+    color: white;
+    background: #2156d9;
+    font: inherit;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.button-secondary {
+    color: #2156d9;
+    background: #e7edff;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 1.5rem;
+}

@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using SafeVault.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,9 @@ using (var command = databaseConnection.CreateCommand())
         CREATE TABLE IF NOT EXISTS Users (
             UserID INTEGER PRIMARY KEY AUTOINCREMENT,
             Username TEXT NOT NULL,
-            Email TEXT NOT NULL
+            Email TEXT NOT NULL,
+            Password TEXT NOT NULL,
+            Role TEXT NOT NULL
         );
         """;
 
@@ -23,12 +26,13 @@ using (var command = databaseConnection.CreateCommand())
 }
 
 builder.Services.AddSingleton(databaseConnection);
+builder.Services.AddSingleton<UserRepository>();
 
 var app = builder.Build();
 
 var defaultFileOptions = new DefaultFilesOptions();
 defaultFileOptions.DefaultFileNames.Clear();
-defaultFileOptions.DefaultFileNames.Add("webform.html");
+defaultFileOptions.DefaultFileNames.Add("index.html");
 
 app.UseDefaultFiles(defaultFileOptions);
 app.UseStaticFiles();
