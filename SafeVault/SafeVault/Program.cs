@@ -19,17 +19,11 @@ var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<
 var adminSettings = builder.Configuration.GetSection(AdminSettings.SectionName).Get<AdminSettings>()
     ?? throw new InvalidOperationException("Admin settings are missing.");
 
-if (string.IsNullOrWhiteSpace(adminSettings.Username)
-    || string.IsNullOrWhiteSpace(adminSettings.Email)
-    || string.IsNullOrWhiteSpace(adminSettings.Password))
-{
+if (string.IsNullOrWhiteSpace(adminSettings.Username) || string.IsNullOrWhiteSpace(adminSettings.Email) || string.IsNullOrWhiteSpace(adminSettings.Password))
     throw new InvalidOperationException("Admin username, email, and password must be configured.");
-}
 
 if (Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
-{
     throw new InvalidOperationException("The JWT signing key must be at least 32 bytes long.");
-}
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services.AddSingleton<JwtTokenService>();

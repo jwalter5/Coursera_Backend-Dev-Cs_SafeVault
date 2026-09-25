@@ -13,26 +13,20 @@ public sealed class UsersController : ControllerBase
 {
     private readonly UserRepository _userRepository;
 
-    public UsersController(UserRepository userRepository)
-    {
+    public UsersController(UserRepository userRepository) =>
         _userRepository = userRepository;
-    }
 
     [Authorize(Roles = "Admin")]
     [HttpGet("all")]
-    public ActionResult<IReadOnlyList<UserResponse>> GetAll()
-    {
-        return Ok(_userRepository.GetAll().Select(UserResponse.FromUser));
-    }
+    public ActionResult<IReadOnlyList<UserResponse>> GetAll() =>
+        Ok(_userRepository.GetAll().Select(UserResponse.FromUser));
 
     [HttpGet]
     public ActionResult<UserResponse> GetById([FromHeader(Name = "id")] int? requestedUserId)
     {
         var userIdResult = ResolveUserId(requestedUserId);
         if (userIdResult.Result is not null)
-        {
             return userIdResult.Result;
-        }
 
         var user = _userRepository.GetById(userIdResult.Value);
         return user is null ? NotFound() : Ok(UserResponse.FromUser(user));
@@ -43,9 +37,7 @@ public sealed class UsersController : ControllerBase
     {
         var userIdResult = ResolveUserId(requestedUserId);
         if (userIdResult.Result is not null)
-        {
             return userIdResult.Result;
-        }
 
         return _userRepository.Delete(userIdResult.Value) ? NoContent() : NotFound();
     }
@@ -56,15 +48,11 @@ public sealed class UsersController : ControllerBase
         [FromBody] UpdateUserRoleRequest request)
     {
         if (request.Role != "User" && request.Role != "Admin")
-        {
             return BadRequest(new { message = "The role must be either User or Admin." });
-        }
 
         var user = _userRepository.GetById(request.UserId);
         if (user is null)
-        {
             return NotFound();
-        }
 
         user.Role = request.Role;
         _userRepository.UpdateRole(request.UserId, request.Role);
@@ -75,25 +63,15 @@ public sealed class UsersController : ControllerBase
     [HttpPut("changePassword")]
     public IActionResult ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.OldPassword)
-            || string.IsNullOrWhiteSpace(request.NewPassword))
-        {
+        if (string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
             return BadRequest(new { message = "The old and new passwords are required." });
-        }
 
         var userIdResult = ResolveUserId(null);
         if (userIdResult.Result is not null)
-        {
             return userIdResult.Result;
-        }
 
-        if (!_userRepository.ChangePassword(
-                userIdResult.Value,
-                request.OldPassword,
-                request.NewPassword))
-        {
+        if (!_userRepository.ChangePassword(userIdResult.Value, request.OldPassword, request.NewPassword))
             return BadRequest(new { message = "The old password is incorrect." });
-        }
 
         return NoContent();
     }
@@ -101,14 +79,10 @@ public sealed class UsersController : ControllerBase
     private ActionResult<int> ResolveUserId(int? requestedUserId)
     {
         if (!int.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var currentUserId))
-        {
             return Unauthorized();
-        }
 
         if (requestedUserId is null || requestedUserId == currentUserId)
-        {
             return currentUserId;
-        }
 
         return User.IsInRole("Admin") ? requestedUserId.Value : Forbid();
     }

@@ -59,9 +59,7 @@ public class UserRepository
 
         using var reader = command.ExecuteReader();
         if (!reader.Read())
-        {
             return null;
-        }
 
         var user = ReadUser(reader);
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
@@ -105,9 +103,7 @@ public class UserRepository
         var users = new List<User>();
 
         while (reader.Read())
-        {
             users.Add(ReadUser(reader));
-        }
 
         return users;
     }
@@ -126,15 +122,11 @@ public class UserRepository
     {
         var user = GetById(userId);
         if (user is null)
-        {
             return false;
-        }
 
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, oldPassword);
         if (verificationResult == PasswordVerificationResult.Failed)
-        {
             return false;
-        }
 
         var passwordHash = _passwordHasher.HashPassword(user, newPassword);
 

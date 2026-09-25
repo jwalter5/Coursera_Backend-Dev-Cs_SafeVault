@@ -26,15 +26,10 @@ public class AuthenticationController : ControllerBase
     public IActionResult CreateUser([FromBody] RegistrationRequest request)
     {
         if (!IsValidRegistrationRequest(request))
-        {
             return BadRequest(new { message = "The registration information is invalid." });
-        }
 
-        if (_userRepository.GetByUsername(request.Username) is not null
-            || _userRepository.GetByEmail(request.Email) is not null)
-        {
+        if (_userRepository.GetByUsername(request.Username) is not null || _userRepository.GetByEmail(request.Email) is not null)
             return Conflict(new { message = "The username or email address is already registered." });
-        }
 
         var user = new User
         {
@@ -53,9 +48,7 @@ public class AuthenticationController : ControllerBase
     public IActionResult Login([FromBody] LoginRequest request)
     {
         if (!IsValidLoginRequest(request))
-        {
             return Unauthorized(new { message = "Invalid username or password." });
-        }
 
         var user = _userRepository.GetByCredentials(request.Username, request.Password);
         return user is null

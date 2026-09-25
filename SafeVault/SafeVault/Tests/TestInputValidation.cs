@@ -101,9 +101,7 @@ public class TestInputValidation
         };
 
         foreach (var request in maliciousRequests)
-        {
             controller.CreateUser(request);
-        }
 
         using var verificationCommand = connection.CreateCommand();
         verificationCommand.CommandText =

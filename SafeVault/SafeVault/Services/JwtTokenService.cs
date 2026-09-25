@@ -11,10 +11,8 @@ public sealed class JwtTokenService
 {
     private readonly JwtSettings _settings;
 
-    public JwtTokenService(IOptions<JwtSettings> settings)
-    {
+    public JwtTokenService(IOptions<JwtSettings> settings) =>
         _settings = settings.Value;
-    }
 
     public TokenResult CreateToken(User user)
     {
