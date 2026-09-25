@@ -45,6 +45,9 @@ public class AuthenticationControllerTests
     [TestCase("invalid user", "user@example.com", "password")]
     [TestCase("<script>alert(1)</script>", "user@example.com", "password")]
     [TestCase("valid-user", "invalid email@example.com", "password")]
+    [TestCase("valid-user", "not-an-email", "password")]
+    [TestCase("valid-user", "user@@example.com", "password")]
+    [TestCase("valid-user", "user@example", "password")]
     [TestCase("valid-user", "user@example.com", " ")]
     public void CreateUserWithInvalidDataReturnsBadRequest(
         string username,
@@ -94,6 +97,43 @@ public class AuthenticationControllerTests
         });
     }
 
+    [TestCase(nameof(RegistrationRequest.Username))]
+    [TestCase(nameof(RegistrationRequest.Email))]
+    [TestCase(nameof(RegistrationRequest.Password))]
+    public void CreateUserRejectsOverlongValues(string overlongProperty)
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var controller = CreateController(repository);
+        var request = new RegistrationRequest
+        {
+            Username = "valid-user",
+            Email = "user@example.com",
+            Password = "password"
+        };
+
+        switch (overlongProperty)
+        {
+            case nameof(RegistrationRequest.Username):
+                request.Username = new string('a', UserInputLimits.UsernameMaxLength + 1);
+                break;
+            case nameof(RegistrationRequest.Email):
+                request.Email = new string('a', UserInputLimits.EmailMaxLength + 1);
+                break;
+            case nameof(RegistrationRequest.Password):
+                request.Password = new string('a', UserInputLimits.PasswordMaxLength + 1);
+                break;
+        }
+
+        var result = controller.CreateUser(request);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(repository.GetAll(), Is.Empty);
+        });
+    }
+
     [Test]
     public void LoginWithValidCredentialsReturnsAuthenticationResponse()
     {
@@ -137,6 +177,27 @@ public class AuthenticationControllerTests
         {
             Username = username,
             Password = password
+        });
+
+        Assert.That(result, Is.TypeOf<UnauthorizedObjectResult>());
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void LoginRejectsOverlongUsernameOrPassword(bool overlongUsername)
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var controller = CreateController(repository);
+
+        var result = controller.Login(new LoginRequest
+        {
+            Username = overlongUsername
+                ? new string('a', UserInputLimits.UsernameMaxLength + 1)
+                : "valid-user",
+            Password = overlongUsername
+                ? "password"
+                : new string('a', UserInputLimits.PasswordMaxLength + 1)
         });
 
         Assert.That(result, Is.TypeOf<UnauthorizedObjectResult>());

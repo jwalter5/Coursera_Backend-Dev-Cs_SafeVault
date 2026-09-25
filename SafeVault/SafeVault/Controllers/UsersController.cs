@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Data;
+using SafeVault.Models;
 
 namespace SafeVault.Controllers;
 
@@ -47,7 +48,9 @@ public sealed class UsersController : ControllerBase
     public ActionResult<UserResponse> UpdateRole(
         [FromBody] UpdateUserRoleRequest request)
     {
-        if (request.Role != "User" && request.Role != "Admin")
+        if (string.IsNullOrWhiteSpace(request.Role)
+            || request.Role.Length > UserInputLimits.RoleMaxLength
+            || (request.Role != "User" && request.Role != "Admin"))
             return BadRequest(new { message = "The role must be either User or Admin." });
 
         var user = _userRepository.GetById(request.UserId);
@@ -63,8 +66,16 @@ public sealed class UsersController : ControllerBase
     [HttpPut("changePassword")]
     public IActionResult ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
-            return BadRequest(new { message = "The old and new passwords are required." });
+        if (string.IsNullOrWhiteSpace(request.OldPassword)
+            || string.IsNullOrWhiteSpace(request.NewPassword)
+            || request.OldPassword.Length > UserInputLimits.PasswordMaxLength
+            || request.NewPassword.Length > UserInputLimits.PasswordMaxLength)
+        {
+            return BadRequest(new
+            {
+                message = $"The old and new passwords are required and must not exceed {UserInputLimits.PasswordMaxLength} characters."
+            });
+        }
 
         var userIdResult = ResolveUserId(null);
         if (userIdResult.Result is not null)

@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using SafeVault.Data;
 using SafeVault.Models;
 using SafeVault.Services;
+using SafeVault.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,8 +20,11 @@ var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<
 var adminSettings = builder.Configuration.GetSection(AdminSettings.SectionName).Get<AdminSettings>()
     ?? throw new InvalidOperationException("Admin settings are missing.");
 
-if (string.IsNullOrWhiteSpace(adminSettings.Username) || string.IsNullOrWhiteSpace(adminSettings.Email) || string.IsNullOrWhiteSpace(adminSettings.Password))
-    throw new InvalidOperationException("Admin username, email, and password must be configured.");
+if (!UserCreationValidator.IsValid(
+        adminSettings.Username,
+        adminSettings.Email,
+        adminSettings.Password))
+    throw new InvalidOperationException("Admin username, email, or password is invalid.");
 
 if (Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
     throw new InvalidOperationException("The JWT signing key must be at least 32 bytes long.");
@@ -55,13 +59,17 @@ databaseConnection.Open();
 using (var command = databaseConnection.CreateCommand())
 {
     command.CommandText =
-        """
+        $"""
         CREATE TABLE IF NOT EXISTS Users (
             UserID INTEGER PRIMARY KEY AUTOINCREMENT,
-            Username TEXT NOT NULL UNIQUE,
-            Email TEXT NOT NULL UNIQUE,
-            Password TEXT NOT NULL,
+            Username TEXT NOT NULL UNIQUE
+                CHECK (length(Username) BETWEEN 1 AND {UserInputLimits.UsernameMaxLength}),
+            Email TEXT NOT NULL UNIQUE
+                CHECK (length(Email) BETWEEN 1 AND {UserInputLimits.EmailMaxLength}),
+            Password TEXT NOT NULL
+                CHECK (length(Password) BETWEEN 1 AND {UserInputLimits.PasswordHashMaxLength}),
             Role TEXT NOT NULL
+                CHECK (length(Role) BETWEEN 1 AND {UserInputLimits.RoleMaxLength})
         );
         """;
 

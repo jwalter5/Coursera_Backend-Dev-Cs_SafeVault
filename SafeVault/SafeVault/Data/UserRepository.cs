@@ -16,6 +16,13 @@ public class UserRepository
 
     public int Create(User user)
     {
+        if (user.Email.Length > UserInputLimits.EmailMaxLength)
+        {
+            throw new ArgumentException(
+                $"Email must not exceed {UserInputLimits.EmailMaxLength} characters.",
+                nameof(user));
+        }
+
         var passwordHash = _passwordHasher.HashPassword(user, user.Password);
 
         using var command = _connection.CreateCommand();
@@ -120,6 +127,9 @@ public class UserRepository
 
     public bool ChangePassword(int userId, string oldPassword, string newPassword)
     {
+        if (newPassword.Length > UserInputLimits.PasswordMaxLength)
+            return false;
+
         var user = GetById(userId);
         if (user is null)
             return false;

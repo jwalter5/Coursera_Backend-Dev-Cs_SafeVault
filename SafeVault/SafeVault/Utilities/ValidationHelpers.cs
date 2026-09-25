@@ -1,3 +1,5 @@
+using System.Net.Mail;
+
 namespace SafeVault.Utilities;
 
 public static class ValidationHelpers
@@ -18,5 +20,20 @@ public static class ValidationHelpers
 
         return !input.Contains("<script", StringComparison.OrdinalIgnoreCase)
             && !input.Contains("<iframe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsValidEmail(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)
+            || !MailAddress.TryCreate(input, out var emailAddress)
+            || !string.Equals(emailAddress.Address, input, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var domain = input[(input.LastIndexOf('@') + 1)..];
+        return domain.Contains('.')
+            && !domain.StartsWith('.')
+            && !domain.EndsWith('.');
     }
 }

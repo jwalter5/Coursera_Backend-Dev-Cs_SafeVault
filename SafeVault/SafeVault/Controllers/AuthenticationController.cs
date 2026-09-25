@@ -25,7 +25,7 @@ public class AuthenticationController : ControllerBase
     [HttpPost("register")]
     public IActionResult CreateUser([FromBody] RegistrationRequest request)
     {
-        if (!IsValidRegistrationRequest(request))
+        if (!UserCreationValidator.IsValid(request.Username, request.Email, request.Password))
             return BadRequest(new { message = "The registration information is invalid." });
 
         if (_userRepository.GetByUsername(request.Username) is not null || _userRepository.GetByEmail(request.Email) is not null)
@@ -62,18 +62,12 @@ public class AuthenticationController : ControllerBase
         return new AuthenticationResponse(token.Token, token.ExpiresAt, UserResponse.FromUser(user));
     }
 
-    private static bool IsValidRegistrationRequest(RegistrationRequest request)
-    {
-        return !string.IsNullOrWhiteSpace(request.Password)
-            && ValidationHelpers.IsValidInput(request.Username, "-_.")
-            && ValidationHelpers.IsValidInput(request.Email, "@._+-")
-            && ValidationHelpers.IsValidXSSInput(request.Username)
-            && ValidationHelpers.IsValidXSSInput(request.Email);
-    }
-
     private static bool IsValidLoginRequest(LoginRequest request)
     {
         return !string.IsNullOrWhiteSpace(request.Password)
+            && !string.IsNullOrWhiteSpace(request.Username)
+            && request.Username.Length <= UserInputLimits.UsernameMaxLength
+            && request.Password.Length <= UserInputLimits.PasswordMaxLength
             && ValidationHelpers.IsValidInput(request.Username, "-_.")
             && ValidationHelpers.IsValidXSSInput(request.Username);
     }

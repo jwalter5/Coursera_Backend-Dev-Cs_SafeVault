@@ -45,13 +45,13 @@
             <h2 id="change-password-title">Passwort ändern</h2>
 
             <label for="old-password">Altes Passwort</label>
-            <input type="password" id="old-password" name="oldPassword" autocomplete="current-password" required>
+            <input type="password" id="old-password" name="oldPassword" autocomplete="current-password" maxlength="128" required>
 
             <label for="new-password">Neues Passwort</label>
-            <input type="password" id="new-password" name="newPassword" autocomplete="new-password" required>
+            <input type="password" id="new-password" name="newPassword" autocomplete="new-password" maxlength="128" required>
 
             <label for="confirm-new-password">Neues Passwort wiederholen</label>
-            <input type="password" id="confirm-new-password" name="confirmNewPassword" autocomplete="new-password" required>
+            <input type="password" id="confirm-new-password" name="confirmNewPassword" autocomplete="new-password" maxlength="128" required>
 
             <p id="change-password-error" class="error" role="alert" hidden></p>
             <div class="dialog-actions">

@@ -258,6 +258,26 @@ public class UsersControllerTests
     }
 
     [Test]
+    public void UpdateRoleRejectsRoleThatExceedsMaximumLength()
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var admin = CreateUser(repository, "admin", "admin@example.com", "Admin");
+        var user = CreateUser(repository, "target-user", "target@example.com");
+        var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
+
+        var result = controller.UpdateRole(new UpdateUserRoleRequest(
+            user.UserID,
+            new string('a', UserInputLimits.RoleMaxLength + 1)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(repository.GetById(user.UserID)?.Role, Is.EqualTo("User"));
+        });
+    }
+
+    [Test]
     public void UpdateRoleReturnsNotFoundForUnknownUser()
     {
         using var connection = CreateDatabase();
@@ -322,6 +342,27 @@ public class UsersControllerTests
         var controller = CreateController(repository, user.UserID.ToString(), user.Role);
 
         var result = controller.ChangePassword(new ChangePasswordRequest(oldPassword, newPassword));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(repository.GetByCredentials(user.Username, "password"), Is.Not.Null);
+        });
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void ChangePasswordRejectsOverlongOldOrNewPassword(bool overlongOldPassword)
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var user = CreateUser(repository, "test-user", "test@example.com");
+        var controller = CreateController(repository, user.UserID.ToString(), user.Role);
+        var overlongPassword = new string('a', UserInputLimits.PasswordMaxLength + 1);
+
+        var result = controller.ChangePassword(new ChangePasswordRequest(
+            overlongOldPassword ? overlongPassword : "password",
+            overlongOldPassword ? "new-password" : overlongPassword));
 
         Assert.Multiple(() =>
         {
