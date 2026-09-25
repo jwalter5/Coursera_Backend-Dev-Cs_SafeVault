@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Data;
@@ -56,10 +57,27 @@ public class AuthenticationController : ControllerBase
             : Ok(CreateAuthenticationResponse(user));
     }
 
+    [AllowAnonymous]
+    [HttpGet("antiforgery-token")]
+    public IActionResult GetAntiforgeryToken([FromServices] IAntiforgery antiforgery)
+    {
+        var tokens = antiforgery.GetAndStoreTokens(HttpContext);
+        return Ok(new { token = tokens.RequestToken });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        AuthenticationCookie.Delete(Response);
+        return NoContent();
+    }
+
     private AuthenticationResponse CreateAuthenticationResponse(User user)
     {
         var token = _jwtTokenService.CreateToken(user);
-        return new AuthenticationResponse(token.Token, token.ExpiresAt, UserResponse.FromUser(user));
+        AuthenticationCookie.Append(Response, token);
+        return new AuthenticationResponse(token.ExpiresAt, UserResponse.FromUser(user));
     }
 
     private static bool IsValidLoginRequest(LoginRequest request)
@@ -86,7 +104,7 @@ public sealed class LoginRequest
     public required string Password { get; set; }
 }
 
-public sealed record AuthenticationResponse(string Token, DateTime ExpiresAt, UserResponse User);
+public sealed record AuthenticationResponse(DateTime ExpiresAt, UserResponse User);
 
 public sealed record UserResponse(int UserId, string Username, string Email, string Role)
 {

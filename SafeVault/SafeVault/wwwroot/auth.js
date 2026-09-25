@@ -1,47 +1,32 @@
 window.SafeVaultAuth = (() => {
     "use strict";
 
-    const tokenKey = "safeVaultToken";
+    let antiforgeryToken;
 
-    function getToken() {
-        return localStorage.getItem(tokenKey);
-    }
-
-    function saveToken(token) {
-        localStorage.setItem(tokenKey, token);
-    }
-
-    function clearToken() {
-        localStorage.removeItem(tokenKey);
-    }
-
-    function hasRole(role) {
-        const token = getToken();
-        if (!token) {
-            return false;
+    async function getAntiforgeryToken() {
+        if (antiforgeryToken) {
+            return antiforgeryToken;
         }
 
-        try {
-            const encodedPayload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-            const payload = JSON.parse(atob(encodedPayload));
-            return payload.role === role;
-        } catch {
-            return false;
+        const response = await fetch("/api/auth/antiforgery-token", {
+            credentials: "same-origin",
+            cache: "no-store"
+        });
+        if (!response.ok) {
+            throw new Error("Could not obtain an antiforgery token.");
         }
+
+        const result = await response.json();
+        antiforgeryToken = result.token;
+        return antiforgeryToken;
     }
 
     async function getCurrentUser() {
-        const token = getToken();
-        if (!token) {
-            return null;
-        }
-
         const response = await fetch("/api/users", {
-            headers: { Authorization: `Bearer ${token}` }
+            credentials: "same-origin"
         });
 
         if (!response.ok) {
-            clearToken();
             return null;
         }
 
@@ -49,14 +34,17 @@ window.SafeVaultAuth = (() => {
     }
 
     async function fetchWithAuth(url, options = {}) {
-        const token = getToken();
-        if (!token) {
-            return null;
+        const headers = new Headers(options.headers);
+        const method = (options.method ?? "GET").toUpperCase();
+        if (!["GET", "HEAD", "OPTIONS", "TRACE"].includes(method)) {
+            headers.set("X-CSRF-TOKEN", await getAntiforgeryToken());
         }
 
-        const headers = new Headers(options.headers);
-        headers.set("Authorization", `Bearer ${token}`);
-        return fetch(url, { ...options, headers });
+        return fetch(url, {
+            ...options,
+            credentials: "same-origin",
+            headers
+        });
     }
 
     async function showCurrentUser() {
@@ -73,12 +61,11 @@ window.SafeVaultAuth = (() => {
             document.getElementById("username").textContent = user.username;
             document.getElementById("email").textContent = user.email;
             document.getElementById("role").textContent = user.role;
-            if (hasRole("Admin")) {
+            if (user.role === "Admin") {
                 document.getElementById("admin-actions").hidden = false;
             }
             userView.hidden = false;
         } catch {
-            clearToken();
             guestView.hidden = false;
         }
     }
@@ -88,9 +75,7 @@ window.SafeVaultAuth = (() => {
             if (await getCurrentUser()) {
                 window.location.replace("/");
             }
-        } catch {
-            clearToken();
-        }
+        } catch { }
     }
 
     function bindForm(formId, endpoint, fieldNames) {
@@ -105,7 +90,7 @@ window.SafeVaultAuth = (() => {
             const body = Object.fromEntries(fieldNames.map(name => [name, formData.get(name)]));
 
             try {
-                const response = await fetch(endpoint, {
+                const response = await fetchWithAuth(endpoint, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(body)
@@ -118,7 +103,6 @@ window.SafeVaultAuth = (() => {
                     return;
                 }
 
-                saveToken(result.token);
                 window.location.assign("/");
             } catch {
                 errorMessage.textContent = "SafeVault ist momentan nicht erreichbar.";
@@ -127,9 +111,12 @@ window.SafeVaultAuth = (() => {
         });
     }
 
-    function logout() {
-        clearToken();
-        window.location.reload();
+    async function logout() {
+        try {
+            await fetchWithAuth("/api/auth/logout", { method: "POST" });
+        } finally {
+            window.location.reload();
+        }
     }
 
     function bindChangePasswordDialog() {
@@ -173,8 +160,7 @@ window.SafeVaultAuth = (() => {
                 });
 
                 if (!response || response.status === 401) {
-                    clearToken();
-                    window.location.reload();
+                    await logout();
                     return;
                 }
 
@@ -213,8 +199,7 @@ window.SafeVaultAuth = (() => {
         try {
             const response = await fetchWithAuth("/api/users", { method: "DELETE" });
             if (!response || response.status === 401) {
-                clearToken();
-                window.location.reload();
+                await logout();
                 return;
             }
 
@@ -224,7 +209,6 @@ window.SafeVaultAuth = (() => {
                 return;
             }
 
-            clearToken();
             window.location.reload();
         } catch {
             statusMessage.classList.add("error");
@@ -240,7 +224,6 @@ window.SafeVaultAuth = (() => {
         deleteCurrentUser,
         fetchWithAuth,
         getCurrentUser,
-        hasRole,
         logout,
         redirectAuthenticatedUser,
         showCurrentUser

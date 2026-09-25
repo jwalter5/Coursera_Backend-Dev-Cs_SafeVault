@@ -146,7 +146,7 @@
     async function initialize() {
         try {
             const currentUser = await SafeVaultAuth.getCurrentUser();
-            if (!currentUser || !SafeVaultAuth.hasRole("Admin")) {
+            if (!currentUser || currentUser.role !== "Admin") {
                 window.location.replace("/");
                 return;
             }

@@ -3,9 +3,9 @@ Repository for the final project of the coursera course "Microsoft Back-End Deve
 
 ## Authentication
 
-Registration and login use `POST /api/auth/register` and `POST /api/auth/login`. Both
-return a JWT bearer token containing the user ID and role. Tokens expire after 30 minutes.
-The browser stores the token in `localStorage`; the logout button removes it.
+Registration and login use `POST /api/auth/register` and `POST /api/auth/login`. Both issue a JWT
+containing the user ID and role in a Secure, HttpOnly, SameSite cookie. Tokens expire after 30
+minutes. The browser cannot read the token, and the logout endpoint expires its cookie.
 
 Authenticated users can get or delete their own account through `/api/users`; the user ID is read
 from the token's `sub` claim. Administrators can target another account for those operations by

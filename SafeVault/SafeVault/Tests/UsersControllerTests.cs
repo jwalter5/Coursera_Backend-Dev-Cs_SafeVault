@@ -10,6 +10,7 @@ using NUnit.Framework;
 using SafeVault.Controllers;
 using SafeVault.Data;
 using SafeVault.Models;
+using SafeVault.Services;
 
 [TestFixture]
 public class UsersControllerTests
@@ -153,6 +154,9 @@ public class UsersControllerTests
         {
             Assert.That(result, Is.TypeOf<NoContentResult>());
             Assert.That(repository.GetById(user.UserID), Is.Null);
+            Assert.That(
+                controller.Response.Headers.SetCookie.ToString(),
+                Does.StartWith($"{AuthenticationCookie.Name}="));
         });
     }
 

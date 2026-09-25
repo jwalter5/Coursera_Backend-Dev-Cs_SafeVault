@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Data;
 using SafeVault.Models;
+using SafeVault.Services;
 
 namespace SafeVault.Controllers;
 
@@ -40,7 +41,16 @@ public sealed class UsersController : ControllerBase
         if (userIdResult.Result is not null)
             return userIdResult.Result;
 
-        return _userRepository.Delete(userIdResult.Value) ? NoContent() : NotFound();
+        if (!_userRepository.Delete(userIdResult.Value))
+            return NotFound();
+
+        if (int.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var currentUserId)
+            && currentUserId == userIdResult.Value)
+        {
+            AuthenticationCookie.Delete(Response);
+        }
+
+        return NoContent();
     }
 
     [Authorize(Roles = "Admin")]

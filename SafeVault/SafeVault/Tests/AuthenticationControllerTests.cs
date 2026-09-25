@@ -33,12 +33,13 @@ public class AuthenticationControllerTests
         {
             Assert.That(okResult, Is.Not.Null);
             Assert.That(response, Is.Not.Null);
-            Assert.That(response!.Token, Is.Not.Empty);
+            Assert.That(response!.ExpiresAt, Is.GreaterThan(DateTime.UtcNow));
             Assert.That(response.User.Username, Is.EqualTo(request.Username));
             Assert.That(response.User.Email, Is.EqualTo(request.Email));
             Assert.That(response.User.Role, Is.EqualTo("User"));
             Assert.That(registeredUser, Is.Not.Null);
             Assert.That(response.User.UserId, Is.EqualTo(registeredUser!.UserID));
+            AssertAuthenticationCookieWasIssued(controller);
         });
     }
 
@@ -155,10 +156,37 @@ public class AuthenticationControllerTests
         {
             Assert.That(okResult, Is.Not.Null);
             Assert.That(response, Is.Not.Null);
-            Assert.That(response!.Token, Is.Not.Empty);
+            Assert.That(response!.ExpiresAt, Is.GreaterThan(DateTime.UtcNow));
             Assert.That(response.User.UserId, Is.EqualTo(user.UserID));
             Assert.That(response.User.Username, Is.EqualTo(user.Username));
             Assert.That(response.User.Role, Is.EqualTo(user.Role));
+            AssertAuthenticationCookieWasIssued(controller);
+        });
+    }
+
+    [Test]
+    public void AuthenticationResponseDoesNotExposeToken()
+    {
+        Assert.That(typeof(AuthenticationResponse).GetProperty("Token"), Is.Null);
+    }
+
+    [Test]
+    public void LogoutExpiresAuthenticationCookie()
+    {
+        using var connection = CreateDatabase();
+        var controller = CreateController(new UserRepository(connection));
+
+        var result = controller.Logout();
+        var setCookie = controller.Response.Headers.SetCookie.ToString();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.TypeOf<NoContentResult>());
+            Assert.That(setCookie, Does.StartWith($"{AuthenticationCookie.Name}="));
+            Assert.That(setCookie, Does.Contain("expires=Thu, 01 Jan 1970 00:00:00 GMT").IgnoreCase);
+            Assert.That(setCookie, Does.Contain("httponly").IgnoreCase);
+            Assert.That(setCookie, Does.Contain("secure").IgnoreCase);
+            Assert.That(setCookie, Does.Contain("samesite=strict").IgnoreCase);
         });
     }
 
@@ -251,6 +279,24 @@ public class AuthenticationControllerTests
             ExpirationMinutes = 30
         });
 
-        return new AuthenticationController(repository, new JwtTokenService(settings));
+        return new AuthenticationController(repository, new JwtTokenService(settings))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+    }
+
+    private static void AssertAuthenticationCookieWasIssued(AuthenticationController controller)
+    {
+        var setCookie = controller.Response.Headers.SetCookie.ToString();
+        Assert.Multiple(() =>
+        {
+            Assert.That(setCookie, Does.StartWith($"{AuthenticationCookie.Name}="));
+            Assert.That(setCookie, Does.Contain("httponly").IgnoreCase);
+            Assert.That(setCookie, Does.Contain("secure").IgnoreCase);
+            Assert.That(setCookie, Does.Contain("samesite=strict").IgnoreCase);
+        });
     }
 }
