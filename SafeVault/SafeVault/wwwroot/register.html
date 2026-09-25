@@ -10,7 +10,7 @@
     <main class="card">
         <h1>Registrierung</h1>
 
-        <form action="/submit" method="post">
+        <form id="register-form">
             <label for="username">Benutzername</label>
             <input type="text" id="username" name="username" autocomplete="username" required>
 
@@ -21,9 +21,15 @@
             <input type="password" id="password" name="password" autocomplete="new-password" required>
 
             <button type="submit">Konto erstellen</button>
+            <p id="error-message" class="error" role="alert" hidden></p>
         </form>
 
         <a class="back-link" href="/">Zurück zur Homepage</a>
     </main>
+    <script src="/auth.js"></script>
+    <script>
+        SafeVaultAuth.redirectAuthenticatedUser();
+        SafeVaultAuth.bindForm("register-form", "/api/auth/register", ["username", "email", "password"]);
+    </script>
 </body>
 </html>

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using SafeVault.Controllers;
 using SafeVault.Data;
+using SafeVault.Services;
 
 [TestFixture]
 public class TestInputValidation
@@ -31,7 +33,7 @@ public class TestInputValidation
             command.ExecuteNonQuery();
         }
 
-        var controller = new AuthenticationController(new UserRepository(connection));
+        var controller = CreateController(new UserRepository(connection));
         var maliciousRequests = new[]
         {
             new LoginRequest
@@ -50,10 +52,10 @@ public class TestInputValidation
         {
             foreach (var request in maliciousRequests)
             {
-                var result = controller.Login(request) as RedirectResult;
+                var result = controller.Login(request) as UnauthorizedObjectResult;
 
                 Assert.That(result, Is.Not.Null);
-                Assert.That(result!.Url, Is.EqualTo("/login.html"),
+                Assert.That(result!.StatusCode, Is.EqualTo(401),
                     $"SQL injection succeeded for username '{request.Username}' and password '{request.Password}'.");
             }
         });
@@ -80,7 +82,7 @@ public class TestInputValidation
             command.ExecuteNonQuery();
         }
 
-        var controller = new AuthenticationController(new UserRepository(connection));
+        var controller = CreateController(new UserRepository(connection));
         const string xssPayload = "<script>alert('XSS')</script>";
         var maliciousRequests = new[]
         {
@@ -118,5 +120,18 @@ public class TestInputValidation
 
         Assert.That(storedXssPayloads, Is.Zero,
             "XSS payloads must be rejected or sanitized before they are stored.");
+    }
+
+    private static AuthenticationController CreateController(UserRepository repository)
+    {
+        var settings = Options.Create(new JwtSettings
+        {
+            Key = "a-test-signing-key-that-is-at-least-thirty-two-bytes-long",
+            Issuer = "SafeVault.Tests",
+            Audience = "SafeVault.Tests",
+            ExpirationMinutes = 30
+        });
+
+        return new AuthenticationController(repository, new JwtTokenService(settings));
     }
 }

@@ -9,12 +9,32 @@
 <body>
     <main class="card">
         <h1>SafeVault</h1>
-        <p>Willkommen bei SafeVault. Erstelle ein Konto oder melde dich an.</p>
+        <section id="guest-view" hidden>
+            <p>Willkommen bei SafeVault. Erstelle ein Konto oder melde dich an.</p>
 
-        <nav class="actions" aria-label="Benutzerkonto">
-            <a class="button" href="/register.html">Registrieren</a>
-            <a class="button button-secondary" href="/login.html">Anmelden</a>
-        </nav>
+            <nav class="actions" aria-label="Benutzerkonto">
+                <a class="button" href="/register.html">Registrieren</a>
+                <a class="button button-secondary" href="/login.html">Anmelden</a>
+            </nav>
+        </section>
+
+        <section id="user-view" hidden>
+            <h2>Benutzerkonto</h2>
+            <dl class="user-information">
+                <dt>Benutzername</dt>
+                <dd id="username"></dd>
+                <dt>E-Mail-Adresse</dt>
+                <dd id="email"></dd>
+                <dt>Rolle</dt>
+                <dd id="role"></dd>
+            </dl>
+            <button id="logout" type="button">Abmelden</button>
+        </section>
     </main>
+    <script src="/auth.js"></script>
+    <script>
+        SafeVaultAuth.showCurrentUser();
+        document.getElementById("logout").addEventListener("click", SafeVaultAuth.logout);
+    </script>
 </body>
 </html>

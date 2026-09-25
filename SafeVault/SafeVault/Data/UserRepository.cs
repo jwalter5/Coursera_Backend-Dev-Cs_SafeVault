@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using SafeVault.Models;
 
@@ -6,6 +7,7 @@ namespace SafeVault.Data;
 public class UserRepository
 {
     private readonly SqliteConnection _connection;
+    private readonly PasswordHasher<User> _passwordHasher = new();
 
     public UserRepository(SqliteConnection connection)
     {
@@ -14,6 +16,8 @@ public class UserRepository
 
     public int Create(User user)
     {
+        var passwordHash = _passwordHasher.HashPassword(user, user.Password);
+
         using var command = _connection.CreateCommand();
         command.CommandText =
             """
@@ -22,7 +26,7 @@ public class UserRepository
 
             SELECT last_insert_rowid();
             """;
-        AddUserParameters(command, user);
+        AddUserParameters(command, user, passwordHash);
 
         return Convert.ToInt32(command.ExecuteScalar());
     }
@@ -49,10 +53,39 @@ public class UserRepository
             """
             SELECT UserID, Username, Email, Password, Role
             FROM Users
-            WHERE Username = $username AND Password = $password;
+            WHERE Username = $username;
             """;
         command.Parameters.AddWithValue("$username", username);
-        command.Parameters.AddWithValue("$password", password);
+
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        var user = ReadUser(reader);
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
+
+        return verificationResult == PasswordVerificationResult.Failed ? null : user;
+    }
+
+    public User? GetByUsername(string username)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText =
+            "SELECT UserID, Username, Email, Password, Role FROM Users WHERE Username = $username;";
+        command.Parameters.AddWithValue("$username", username);
+
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? ReadUser(reader) : null;
+    }
+
+    public User? GetByEmail(string email)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText =
+            "SELECT UserID, Username, Email, Password, Role FROM Users WHERE Email = $email;";
+        command.Parameters.AddWithValue("$email", email);
 
         using var reader = command.ExecuteReader();
         return reader.Read() ? ReadUser(reader) : null;
@@ -81,6 +114,13 @@ public class UserRepository
 
     public bool Update(User user)
     {
+        // Objects returned by this repository contain the persisted password hash. Preserve
+        // that value when only another user property is changed; otherwise hash the new password.
+        var storedPasswordHash = GetPasswordHash(user.UserID);
+        var passwordHash = storedPasswordHash is not null && storedPasswordHash == user.Password
+            ? storedPasswordHash
+            : _passwordHasher.HashPassword(user, user.Password);
+
         using var command = _connection.CreateCommand();
         command.CommandText =
             """
@@ -91,7 +131,7 @@ public class UserRepository
                 Role = $role
             WHERE UserID = $userId;
             """;
-        AddUserParameters(command, user);
+        AddUserParameters(command, user, passwordHash);
         command.Parameters.AddWithValue("$userId", user.UserID);
 
         return command.ExecuteNonQuery() == 1;
@@ -106,11 +146,20 @@ public class UserRepository
         return command.ExecuteNonQuery() == 1;
     }
 
-    private static void AddUserParameters(SqliteCommand command, User user)
+    private string? GetPasswordHash(int userId)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText = "SELECT Password FROM Users WHERE UserID = $userId;";
+        command.Parameters.AddWithValue("$userId", userId);
+
+        return command.ExecuteScalar() as string;
+    }
+
+    private static void AddUserParameters(SqliteCommand command, User user, string passwordHash)
     {
         command.Parameters.AddWithValue("$username", user.Username);
         command.Parameters.AddWithValue("$email", user.Email);
-        command.Parameters.AddWithValue("$password", user.Password);
+        command.Parameters.AddWithValue("$password", passwordHash);
         command.Parameters.AddWithValue("$role", user.Role);
     }
 
