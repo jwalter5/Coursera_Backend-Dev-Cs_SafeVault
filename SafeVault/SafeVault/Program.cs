@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.IdentityModel.Tokens;
 using SafeVault.Data;
+using SafeVault.Models;
 using SafeVault.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,16 @@ builder.Services.AddControllers();
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException("JWT settings are missing.");
+
+var adminSettings = builder.Configuration.GetSection(AdminSettings.SectionName).Get<AdminSettings>()
+    ?? throw new InvalidOperationException("Admin settings are missing.");
+
+if (string.IsNullOrWhiteSpace(adminSettings.Username)
+    || string.IsNullOrWhiteSpace(adminSettings.Email)
+    || string.IsNullOrWhiteSpace(adminSettings.Password))
+{
+    throw new InvalidOperationException("Admin username, email, and password must be configured.");
+}
 
 if (Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
 {
@@ -63,8 +74,17 @@ using (var command = databaseConnection.CreateCommand())
     command.ExecuteNonQuery();
 }
 
+var userRepository = new UserRepository(databaseConnection);
+userRepository.Create(new User
+{
+    Username = adminSettings.Username,
+    Email = adminSettings.Email,
+    Password = adminSettings.Password,
+    Role = "Admin"
+});
+
 builder.Services.AddSingleton(databaseConnection);
-builder.Services.AddSingleton<UserRepository>();
+builder.Services.AddSingleton(userRepository);
 
 var app = builder.Build();
 

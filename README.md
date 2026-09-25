@@ -24,6 +24,11 @@ contents before starting the application:
     "Audience": "SafeVault.Web",
     "ExpirationMinutes": 30
   },
+  "Admin": {
+    "Username": "admin",
+    "Email": "admin@example.com",
+    "Password": "replace-this-with-a-strong-admin-password"
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
@@ -39,8 +44,13 @@ contents before starting the application:
 - `Issuer` identifies the application that creates the token.
 - `Audience` identifies the application for which the token is intended.
 - `ExpirationMinutes` must be `30` to keep tokens valid for the required 30-minute period.
+- `Admin:Username`, `Admin:Email`, and `Admin:Password` define the standard administrator
+  account that is created when the application starts. The password is hashed before it is
+  stored in the database. Replace all example credentials, especially the password, with values
+  suitable for your environment.
 
 For deployments, supply secrets through the hosting environment instead of a settings file.
 ASP.NET Core configuration uses double underscores for nested environment variables, so the
 signing key can be provided as `Jwt__Key`. The other settings can likewise be overridden with
-`Jwt__Issuer`, `Jwt__Audience`, and `Jwt__ExpirationMinutes`.
+`Jwt__Issuer`, `Jwt__Audience`, and `Jwt__ExpirationMinutes`. Administrator settings can be
+provided as `Admin__Username`, `Admin__Email`, and `Admin__Password`.
