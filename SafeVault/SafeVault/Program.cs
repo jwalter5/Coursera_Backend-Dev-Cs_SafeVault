@@ -114,6 +114,28 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["Content-Security-Policy"] =
+        "default-src 'none'; " +
+        "script-src 'self'; " +
+        "style-src 'self'; " +
+        "connect-src 'self'; " +
+        "img-src 'self'; " +
+        "font-src 'self'; " +
+        "base-uri 'none'; " +
+        "form-action 'self'; " +
+        "frame-ancestors 'none'; " +
+        "object-src 'none'; " +
+        "upgrade-insecure-requests";
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] =
+        "camera=(), microphone=(), geolocation=()";
+
+    await next();
+});
+
 var defaultFileOptions = new DefaultFilesOptions();
 defaultFileOptions.DefaultFileNames.Clear();
 defaultFileOptions.DefaultFileNames.Add("index.html");
