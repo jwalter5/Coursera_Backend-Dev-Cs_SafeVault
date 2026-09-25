@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Data;
@@ -63,19 +61,6 @@ public class AuthenticationController : ControllerBase
         return user is null
             ? Unauthorized(new { message = "Invalid username or password." })
             : Ok(CreateAuthenticationResponse(user));
-    }
-
-    [Authorize]
-    [HttpGet("me")]
-    public ActionResult<UserResponse> Me()
-    {
-        if (!int.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var userId))
-        {
-            return Unauthorized();
-        }
-
-        var user = _userRepository.GetById(userId);
-        return user is null ? Unauthorized() : Ok(UserResponse.FromUser(user));
     }
 
     private AuthenticationResponse CreateAuthenticationResponse(User user)

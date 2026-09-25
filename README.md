@@ -7,8 +7,15 @@ Registration and login use `POST /api/auth/register` and `POST /api/auth/login`.
 return a JWT bearer token containing the user ID and role. Tokens expire after 30 minutes.
 The browser stores the token in `localStorage`; the logout button removes it.
 
-`GET /api/auth/me` requires a bearer token. User listing, lookup, update, and deletion under
-`/api/users` require the `Admin` role.
+Authenticated users can get or delete their own account through `/api/users`; the user ID is read
+from the token's `sub` claim. Administrators can target another account for those operations by
+supplying its ID in the `id` request header. `GET /api/users/all` and role changes require the
+`Admin` role. Role changes use `PUT /api/users/role` with the target `userId` and new `role` in the
+request body. Usernames and email addresses cannot be changed.
+
+Logged-in administrators can open `/admin.html` from the homepage to view all users and
+change their roles. Role-based permissions follow the JWT and therefore change after the affected
+user logs in again.
 
 ## Local configuration
 

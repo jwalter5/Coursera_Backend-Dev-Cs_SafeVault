@@ -28,13 +28,44 @@
                 <dt>Rolle</dt>
                 <dd id="role"></dd>
             </dl>
-            <button id="logout" type="button">Abmelden</button>
+            <nav id="admin-actions" class="actions" aria-label="Administration" hidden>
+                <a class="button" href="/admin.html">Benutzer verwalten</a>
+            </nav>
+            <div class="actions">
+                <button id="open-change-password" class="button-secondary" type="button">Change Password</button>
+                <button id="logout" type="button">Abmelden</button>
+                <button id="delete-account" class="button-danger" type="button">Konto löschen</button>
+            </div>
+            <p id="account-status" class="status" role="status" aria-live="polite"></p>
         </section>
     </main>
+
+    <dialog id="change-password-dialog" aria-labelledby="change-password-title">
+        <form id="change-password-form">
+            <h2 id="change-password-title">Passwort ändern</h2>
+
+            <label for="old-password">Altes Passwort</label>
+            <input type="password" id="old-password" name="oldPassword" autocomplete="current-password" required>
+
+            <label for="new-password">Neues Passwort</label>
+            <input type="password" id="new-password" name="newPassword" autocomplete="new-password" required>
+
+            <label for="confirm-new-password">Neues Passwort wiederholen</label>
+            <input type="password" id="confirm-new-password" name="confirmNewPassword" autocomplete="new-password" required>
+
+            <p id="change-password-error" class="error" role="alert" hidden></p>
+            <div class="dialog-actions">
+                <button id="cancel-change-password" class="button-secondary" type="button">Abbrechen</button>
+                <button type="submit">Passwort ändern</button>
+            </div>
+        </form>
+    </dialog>
     <script src="/auth.js"></script>
     <script>
         SafeVaultAuth.showCurrentUser();
+        SafeVaultAuth.bindChangePasswordDialog();
         document.getElementById("logout").addEventListener("click", SafeVaultAuth.logout);
+        document.getElementById("delete-account").addEventListener("click", SafeVaultAuth.deleteCurrentUser);
     </script>
 </body>
 </html>

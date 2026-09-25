@@ -7,7 +7,7 @@ using SafeVault.Models;
 public class UserRepositoryTests
 {
     [Test]
-    public void CrudOperationsPersistUserChanges()
+    public void CrudOperationsPersistRoleChanges()
     {
         using var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
@@ -52,10 +52,17 @@ public class UserRepositoryTests
         Assert.That(repository.GetById(user.UserID)?.Username, Is.EqualTo("test-user"));
         Assert.That(repository.GetAll(), Has.Count.EqualTo(1));
 
-        user.Email = "updated@example.com";
-        Assert.That(repository.Update(user), Is.True);
-        Assert.That(repository.GetById(user.UserID)?.Email, Is.EqualTo("updated@example.com"));
+        Assert.That(repository.UpdateRole(user.UserID, "Admin"), Is.True);
+        Assert.That(repository.GetById(user.UserID)?.Role, Is.EqualTo("Admin"));
+        Assert.That(repository.GetById(user.UserID)?.Email, Is.EqualTo("test@example.com"));
         Assert.That(repository.GetByCredentials("test-user", "password"), Is.Not.Null);
+
+        Assert.That(repository.ChangePassword(user.UserID, "wrong-password", "new-password"), Is.False);
+        Assert.That(repository.GetByCredentials("test-user", "password"), Is.Not.Null);
+
+        Assert.That(repository.ChangePassword(user.UserID, "password", "new-password"), Is.True);
+        Assert.That(repository.GetByCredentials("test-user", "password"), Is.Null);
+        Assert.That(repository.GetByCredentials("test-user", "new-password"), Is.Not.Null);
 
         Assert.That(repository.Delete(user.UserID), Is.True);
         Assert.That(repository.GetById(user.UserID), Is.Null);

@@ -1,12 +1,13 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Data;
-using SafeVault.Utilities;
 
 namespace SafeVault.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Admin")]
+[Authorize]
 [Route("api/users")]
 public sealed class UsersController : ControllerBase
 {
@@ -17,50 +18,101 @@ public sealed class UsersController : ControllerBase
         _userRepository = userRepository;
     }
 
-    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    [HttpGet("all")]
     public ActionResult<IReadOnlyList<UserResponse>> GetAll()
     {
         return Ok(_userRepository.GetAll().Select(UserResponse.FromUser));
     }
 
-    [HttpGet("{userId:int}")]
-    public ActionResult<UserResponse> GetById(int userId)
+    [HttpGet]
+    public ActionResult<UserResponse> GetById([FromHeader(Name = "id")] int? requestedUserId)
     {
-        var user = _userRepository.GetById(userId);
+        var userIdResult = ResolveUserId(requestedUserId);
+        if (userIdResult.Result is not null)
+        {
+            return userIdResult.Result;
+        }
+
+        var user = _userRepository.GetById(userIdResult.Value);
         return user is null ? NotFound() : Ok(UserResponse.FromUser(user));
     }
 
-    [HttpDelete("{userId:int}")]
-    public IActionResult Delete(int userId)
+    [HttpDelete]
+    public IActionResult Delete([FromHeader(Name = "id")] int? requestedUserId)
     {
-        return _userRepository.Delete(userId) ? NoContent() : NotFound();
-    }
-
-    [HttpPut("{userId:int}")]
-    public ActionResult<UserResponse> Update(int userId, [FromBody] UpdateUserRequest request)
-    {
-        if (!ValidationHelpers.IsValidInput(request.Username, "-_.")
-            || !ValidationHelpers.IsValidInput(request.Email, "@._+-")
-            || !ValidationHelpers.IsValidXSSInput(request.Username)
-            || !ValidationHelpers.IsValidXSSInput(request.Email)
-            || (request.Role != "User" && request.Role != "Admin"))
+        var userIdResult = ResolveUserId(requestedUserId);
+        if (userIdResult.Result is not null)
         {
-            return BadRequest(new { message = "The user information is invalid." });
+            return userIdResult.Result;
         }
 
-        var user = _userRepository.GetById(userId);
+        return _userRepository.Delete(userIdResult.Value) ? NoContent() : NotFound();
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("role")]
+    public ActionResult<UserResponse> UpdateRole(
+        [FromBody] UpdateUserRoleRequest request)
+    {
+        if (request.Role != "User" && request.Role != "Admin")
+        {
+            return BadRequest(new { message = "The role must be either User or Admin." });
+        }
+
+        var user = _userRepository.GetById(request.UserId);
         if (user is null)
         {
             return NotFound();
         }
 
-        user.Username = request.Username;
-        user.Email = request.Email;
         user.Role = request.Role;
-        _userRepository.Update(user);
+        _userRepository.UpdateRole(request.UserId, request.Role);
 
         return Ok(UserResponse.FromUser(user));
     }
+
+    [HttpPut("changePassword")]
+    public IActionResult ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.OldPassword)
+            || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest(new { message = "The old and new passwords are required." });
+        }
+
+        var userIdResult = ResolveUserId(null);
+        if (userIdResult.Result is not null)
+        {
+            return userIdResult.Result;
+        }
+
+        if (!_userRepository.ChangePassword(
+                userIdResult.Value,
+                request.OldPassword,
+                request.NewPassword))
+        {
+            return BadRequest(new { message = "The old password is incorrect." });
+        }
+
+        return NoContent();
+    }
+
+    private ActionResult<int> ResolveUserId(int? requestedUserId)
+    {
+        if (!int.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        if (requestedUserId is null || requestedUserId == currentUserId)
+        {
+            return currentUserId;
+        }
+
+        return User.IsInRole("Admin") ? requestedUserId.Value : Forbid();
+    }
 }
 
-public sealed record UpdateUserRequest(string Username, string Email, string Role);
+public sealed record UpdateUserRoleRequest(int UserId, string Role);
+public sealed record ChangePasswordRequest(string OldPassword, string NewPassword);

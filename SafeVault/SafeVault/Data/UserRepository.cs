@@ -112,27 +112,36 @@ public class UserRepository
         return users;
     }
 
-    public bool Update(User user)
+    public bool UpdateRole(int userId, string role)
     {
-        // Objects returned by this repository contain the persisted password hash. Preserve
-        // that value when only another user property is changed; otherwise hash the new password.
-        var storedPasswordHash = GetPasswordHash(user.UserID);
-        var passwordHash = storedPasswordHash is not null && storedPasswordHash == user.Password
-            ? storedPasswordHash
-            : _passwordHasher.HashPassword(user, user.Password);
+        using var command = _connection.CreateCommand();
+        command.CommandText = "UPDATE Users SET Role = $role WHERE UserID = $userId;";
+        command.Parameters.AddWithValue("$role", role);
+        command.Parameters.AddWithValue("$userId", userId);
+
+        return command.ExecuteNonQuery() == 1;
+    }
+
+    public bool ChangePassword(int userId, string oldPassword, string newPassword)
+    {
+        var user = GetById(userId);
+        if (user is null)
+        {
+            return false;
+        }
+
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, oldPassword);
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            return false;
+        }
+
+        var passwordHash = _passwordHasher.HashPassword(user, newPassword);
 
         using var command = _connection.CreateCommand();
-        command.CommandText =
-            """
-            UPDATE Users
-            SET Username = $username,
-                Email = $email,
-                Password = $password,
-                Role = $role
-            WHERE UserID = $userId;
-            """;
-        AddUserParameters(command, user, passwordHash);
-        command.Parameters.AddWithValue("$userId", user.UserID);
+        command.CommandText = "UPDATE Users SET Password = $password WHERE UserID = $userId;";
+        command.Parameters.AddWithValue("$password", passwordHash);
+        command.Parameters.AddWithValue("$userId", userId);
 
         return command.ExecuteNonQuery() == 1;
     }
@@ -144,15 +153,6 @@ public class UserRepository
         command.Parameters.AddWithValue("$userId", userId);
 
         return command.ExecuteNonQuery() == 1;
-    }
-
-    private string? GetPasswordHash(int userId)
-    {
-        using var command = _connection.CreateCommand();
-        command.CommandText = "SELECT Password FROM Users WHERE UserID = $userId;";
-        command.Parameters.AddWithValue("$userId", userId);
-
-        return command.ExecuteScalar() as string;
     }
 
     private static void AddUserParameters(SqliteCommand command, User user, string passwordHash)
