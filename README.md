@@ -1,6 +1,15 @@
 # Coursera_Backend-Dev-Cs_SafeVault
 Repository for the final project of the coursera course "Microsoft Back-End Developer Professional Certificate - Security and Authentication"
 
+A simple web application developed with the use of AI.
+Functionalities:
+ - Registration of new users
+ - Login/Logout with existing users
+ - Change Password or delete account for user-role authorization
+ - Manage other users with the admin-role (view all users, change role, delete account)
+
+For simplicity, an in-memory database is used.
+
 ## Authentication
 
 Registration and login use `POST /api/auth/register` and `POST /api/auth/login`. Both issue a JWT
