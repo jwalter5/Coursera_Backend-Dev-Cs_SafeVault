@@ -7,4 +7,5 @@ public static class UserInputLimits
     public const int PasswordMaxLength = 128;
     public const int PasswordHashMaxLength = 256;
     public const int RoleMaxLength = 16;
+    public const int PersonalDataMaxLength = 4096;
 }

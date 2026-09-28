@@ -6,6 +6,7 @@ Functionalities:
  - Registration of new users
  - Login/Logout with existing users
  - Change Password or delete account for user-role authorization
+ - View and edit per-user personal data encrypted at rest with AES-256-GCM
  - Manage other users with the admin-role (view all users, change role, delete account)
 
 For simplicity, an in-memory database is used.
@@ -32,6 +33,11 @@ Logged-in administrators can open `/admin.html` from the homepage to view all us
 change their roles. Role-based permissions follow the JWT and therefore change after the affected
 user logs in again.
 
+Personal data is read and saved through `GET` and `PUT /api/users/personal-data`. These routes
+always derive the record ID from the authenticated token and do not accept a target user ID.
+Consequently, administrators can manage only their own personal data and cannot retrieve another
+user's personal data. The value is encrypted before it is written to the database.
+
 ## Local configuration
 
 The application requires JWT settings at startup. Because `appsettings.json` is intentionally
@@ -50,6 +56,9 @@ contents before starting the application:
     "Username": "admin",
     "Email": "admin@example.com",
     "Password": "replace-this-with-a-strong-admin-password"
+  },
+  "Aes": {
+    "Key": "replace-with-a-base64-encoded-random-32-byte-key"
   },
   "Logging": {
     "LogLevel": {
@@ -70,9 +79,13 @@ contents before starting the application:
   account that is created when the application starts. The password is hashed before it is
   stored in the database. Replace all example credentials, especially the password, with values
   suitable for your environment.
+- `Aes:Key` is a Base64-encoded, random 32-byte key used for AES-256-GCM encryption of each
+  user's personal data. Keep it secret and stable: changing or losing it makes existing personal
+  data unreadable. Generate one with `openssl rand -base64 32`.
 
 For deployments, supply secrets through the hosting environment instead of a settings file.
 ASP.NET Core configuration uses double underscores for nested environment variables, so the
 signing key can be provided as `Jwt__Key`. The other settings can likewise be overridden with
 `Jwt__Issuer`, `Jwt__Audience`, and `Jwt__ExpirationMinutes`. Administrator settings can be
 provided as `Admin__Username`, `Admin__Email`, and `Admin__Password`.
+The AES key can be provided as `Aes__Key`.

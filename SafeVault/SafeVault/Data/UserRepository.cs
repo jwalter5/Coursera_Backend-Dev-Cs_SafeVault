@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using SafeVault.Models;
+using SafeVault.Services;
 
 namespace SafeVault.Data;
 
@@ -8,10 +9,19 @@ public class UserRepository
 {
     private readonly SqliteConnection _connection;
     private readonly PasswordHasher<User> _passwordHasher = new();
+    private readonly PersonalDataEncryptionService? _personalDataEncryption;
 
     public UserRepository(SqliteConnection connection)
     {
         _connection = connection;
+    }
+
+    public UserRepository(
+        SqliteConnection connection,
+        PersonalDataEncryptionService personalDataEncryption)
+    {
+        _connection = connection;
+        _personalDataEncryption = personalDataEncryption;
     }
 
     public int Create(User user)
@@ -115,6 +125,31 @@ public class UserRepository
             users.Add(ReadUser(reader));
 
         return users;
+    }
+
+    public string? GetPersonalData(int userId)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText = "SELECT PersonalData FROM Users WHERE UserID = $userId;";
+        command.Parameters.AddWithValue("$userId", userId);
+
+        var encryptedValue = command.ExecuteScalar();
+        if (encryptedValue is null || encryptedValue is DBNull)
+            return null;
+
+        return GetPersonalDataEncryption().Decrypt((string)encryptedValue, userId);
+    }
+
+    public bool SavePersonalData(int userId, string personalData)
+    {
+        var encryptedValue = GetPersonalDataEncryption().Encrypt(personalData, userId);
+
+        using var command = _connection.CreateCommand();
+        command.CommandText =
+            "UPDATE Users SET PersonalData = $personalData WHERE UserID = $userId;";
+        command.Parameters.AddWithValue("$personalData", encryptedValue);
+        command.Parameters.AddWithValue("$userId", userId);
+        return command.ExecuteNonQuery() == 1;
     }
 
     public UserMutationResult UpdateRole(int userId, string role)
@@ -232,6 +267,10 @@ public class UserRepository
 
         return command.ExecuteNonQuery() == 1;
     }
+
+    private PersonalDataEncryptionService GetPersonalDataEncryption() =>
+        _personalDataEncryption
+        ?? throw new InvalidOperationException("Personal-data encryption has not been configured.");
 
     private static void AddUserParameters(SqliteCommand command, User user, string passwordHash)
     {

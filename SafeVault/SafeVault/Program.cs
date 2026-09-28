@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using SafeVault.Data;
 using SafeVault.Models;
 using SafeVault.Services;
@@ -32,6 +33,11 @@ var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<
 var adminSettings = builder.Configuration.GetSection(AdminSettings.SectionName).Get<AdminSettings>()
     ?? throw new InvalidOperationException("Admin settings are missing.");
 
+var aesSettings = builder.Configuration.GetSection(AesSettings.SectionName).Get<AesSettings>()
+    ?? throw new InvalidOperationException("AES settings are missing.");
+
+var personalDataEncryption = new PersonalDataEncryptionService(Options.Create(aesSettings));
+
 if (!UserCreationValidator.IsValid(
         adminSettings.Username,
         adminSettings.Email,
@@ -42,6 +48,8 @@ if (Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
     throw new InvalidOperationException("The JWT signing key must be at least 32 bytes long.");
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+builder.Services.Configure<AesSettings>(builder.Configuration.GetSection(AesSettings.SectionName));
+builder.Services.AddSingleton(personalDataEncryption);
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -92,14 +100,15 @@ using (var command = databaseConnection.CreateCommand())
             Password TEXT NOT NULL
                 CHECK (length(Password) BETWEEN 1 AND {UserInputLimits.PasswordHashMaxLength}),
             Role TEXT NOT NULL
-                CHECK (length(Role) BETWEEN 1 AND {UserInputLimits.RoleMaxLength})
+                CHECK (length(Role) BETWEEN 1 AND {UserInputLimits.RoleMaxLength}),
+            PersonalData VARCHAR
         );
         """;
 
     command.ExecuteNonQuery();
 }
 
-var userRepository = new UserRepository(databaseConnection);
+var userRepository = new UserRepository(databaseConnection, personalDataEncryption);
 userRepository.Create(new User
 {
     Username = adminSettings.Username,

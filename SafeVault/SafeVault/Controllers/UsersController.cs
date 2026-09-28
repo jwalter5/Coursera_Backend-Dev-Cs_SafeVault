@@ -145,6 +145,39 @@ public sealed class UsersController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("personal-data")]
+    public ActionResult<PersonalDataResponse> GetPersonalData()
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+            return Unauthorized();
+
+        if (_userRepository.GetById(currentUserId) is null)
+            return Unauthorized();
+
+        return Ok(new PersonalDataResponse(
+            _userRepository.GetPersonalData(currentUserId) ?? string.Empty));
+    }
+
+    [HttpPut("personal-data")]
+    public IActionResult SavePersonalData([FromBody] SavePersonalDataRequest request)
+    {
+        if (request.PersonalData is null
+            || request.PersonalData.Length > UserInputLimits.PersonalDataMaxLength)
+        {
+            return BadRequest(new
+            {
+                message = $"Personal data must not exceed {UserInputLimits.PersonalDataMaxLength} characters."
+            });
+        }
+
+        if (!TryGetCurrentUserId(out var currentUserId))
+            return Unauthorized();
+
+        return _userRepository.SavePersonalData(currentUserId, request.PersonalData)
+            ? NoContent()
+            : Unauthorized();
+    }
+
     private ActionResult<int> ResolveUserId(int? requestedUserId)
     {
         if (!TryGetCurrentUserId(out var currentUserId))
@@ -167,3 +200,5 @@ public sealed class UsersController : ControllerBase
 public sealed record DeleteUserRequest(string CurrentPassword);
 public sealed record UpdateUserRoleRequest(int UserId, string Role, string CurrentPassword);
 public sealed record ChangePasswordRequest(string OldPassword, string NewPassword);
+public sealed record SavePersonalDataRequest(string PersonalData);
+public sealed record PersonalDataResponse(string PersonalData);

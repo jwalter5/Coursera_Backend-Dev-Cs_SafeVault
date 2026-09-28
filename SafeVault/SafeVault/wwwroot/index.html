@@ -28,6 +28,13 @@
                 <dt>Rolle</dt>
                 <dd id="role"></dd>
             </dl>
+            <form id="personal-data-form">
+                <label for="personal-data">Persönliche Daten</label>
+                <textarea id="personal-data" name="personalData" rows="7" maxlength="4096" aria-describedby="personal-data-help"></textarea>
+                <small id="personal-data-help">Nur du kannst diese verschlüsselten Daten lesen (maximal 4096 Zeichen).</small>
+                <button type="submit">Persönliche Daten speichern</button>
+                <p id="personal-data-status" class="status" role="status" aria-live="polite"></p>
+            </form>
             <nav id="admin-actions" class="actions" aria-label="Administration" hidden>
                 <a class="button" href="/admin.html">Benutzer verwalten</a>
             </nav>

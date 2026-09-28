@@ -451,7 +451,8 @@ public sealed class SecurityPipelineTests
                     ["Jwt:ExpirationMinutes"] = "30",
                     ["Admin:Username"] = AdminUsername,
                     ["Admin:Email"] = "integration-admin@example.com",
-                    ["Admin:Password"] = AdminPassword
+                    ["Admin:Password"] = AdminPassword,
+                    ["Aes:Key"] = "U2FmZVZhdWx0LXRlc3QtQUVTLWtleS0zMi1ieXRlcyE="
                 }));
             builder.ConfigureServices(services =>
                 services.PostConfigure<JwtBearerOptions>(
