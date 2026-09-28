@@ -65,7 +65,6 @@ public class AuthenticationController : ControllerBase
         return Ok(new { token = tokens.RequestToken });
     }
 
-    [AllowAnonymous]
     [HttpPost("logout")]
     public IActionResult Logout()
     {

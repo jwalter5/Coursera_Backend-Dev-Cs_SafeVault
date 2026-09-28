@@ -1,5 +1,5 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.IdentityModel.Tokens;
@@ -7,6 +7,7 @@ using SafeVault.Data;
 using SafeVault.Models;
 using SafeVault.Services;
 using SafeVault.Utilities;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,7 +70,10 @@ builder.Services
             }
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
 
 // create and open In-Memory-Database
 var databaseConnection = new SqliteConnection("Data Source=:memory:");
