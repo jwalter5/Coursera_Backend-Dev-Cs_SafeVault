@@ -14,9 +14,13 @@ namespace SafeVault.Controllers;
 public sealed class UsersController : ControllerBase
 {
     private readonly UserRepository _userRepository;
+    private readonly JwtTokenService _jwtTokenService;
 
-    public UsersController(UserRepository userRepository) =>
+    public UsersController(UserRepository userRepository, JwtTokenService jwtTokenService)
+    {
         _userRepository = userRepository;
+        _jwtTokenService = jwtTokenService;
+    }
 
     [Authorize(Roles = "Admin")]
     [HttpGet("all")]
@@ -35,20 +39,39 @@ public sealed class UsersController : ControllerBase
     }
 
     [HttpDelete]
-    public IActionResult Delete([FromHeader(Name = "id")] int? requestedUserId)
+    public IActionResult Delete(
+        [FromHeader(Name = "id")] int? requestedUserId,
+        [FromBody] DeleteUserRequest request)
     {
         var userIdResult = ResolveUserId(requestedUserId);
         if (userIdResult.Result is not null)
             return userIdResult.Result;
 
-        if (!_userRepository.Delete(userIdResult.Value))
+        if (!TryGetCurrentUserId(out var currentUserId))
+            return Unauthorized();
+
+        var currentUser = _userRepository.GetById(currentUserId);
+        if (currentUser is null)
+            return Unauthorized();
+
+        if (userIdResult.Value != currentUserId && currentUser.Role != "Admin")
+            return Forbid();
+
+        if (!IsValidPasswordConfirmation(request.CurrentPassword)
+            || !_userRepository.VerifyPassword(currentUserId, request.CurrentPassword))
+        {
+            return BadRequest(new { message = "The current password is incorrect." });
+        }
+
+        var deleteResult = _userRepository.Delete(userIdResult.Value);
+        if (deleteResult == UserMutationResult.NotFound)
             return NotFound();
 
-        if (int.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var currentUserId)
-            && currentUserId == userIdResult.Value)
-        {
+        if (deleteResult == UserMutationResult.LastAdministrator)
+            return Conflict(new { message = "The final administrator cannot be deleted." });
+
+        if (currentUserId == userIdResult.Value)
             AuthenticationCookie.Delete(Response);
-        }
 
         return NoContent();
     }
@@ -63,12 +86,32 @@ public sealed class UsersController : ControllerBase
             || (request.Role != "User" && request.Role != "Admin"))
             return BadRequest(new { message = "The role must be either User or Admin." });
 
-        var user = _userRepository.GetById(request.UserId);
-        if (user is null)
+        if (!TryGetCurrentUserId(out var currentUserId))
+            return Unauthorized();
+
+        var currentUser = _userRepository.GetById(currentUserId);
+        if (currentUser is null)
+            return Unauthorized();
+
+        if (currentUser.Role != "Admin")
+            return Forbid();
+
+        if (!IsValidPasswordConfirmation(request.CurrentPassword)
+            || !_userRepository.VerifyPassword(currentUserId, request.CurrentPassword))
+        {
+            return BadRequest(new { message = "The current password is incorrect." });
+        }
+
+        var updateResult = _userRepository.UpdateRole(request.UserId, request.Role);
+        if (updateResult == UserMutationResult.NotFound)
             return NotFound();
 
-        user.Role = request.Role;
-        _userRepository.UpdateRole(request.UserId, request.Role);
+        if (updateResult == UserMutationResult.LastAdministrator)
+            return Conflict(new { message = "The final administrator cannot be demoted." });
+
+        var user = _userRepository.GetById(request.UserId)!;
+        if (currentUserId == request.UserId)
+            AuthenticationCookie.Append(Response, _jwtTokenService.CreateToken(user));
 
         return Ok(UserResponse.FromUser(user));
     }
@@ -94,12 +137,17 @@ public sealed class UsersController : ControllerBase
         if (!_userRepository.ChangePassword(userIdResult.Value, request.OldPassword, request.NewPassword))
             return BadRequest(new { message = "The old password is incorrect." });
 
+        var user = _userRepository.GetById(userIdResult.Value);
+        if (user is null)
+            return Unauthorized();
+
+        AuthenticationCookie.Append(Response, _jwtTokenService.CreateToken(user));
         return NoContent();
     }
 
     private ActionResult<int> ResolveUserId(int? requestedUserId)
     {
-        if (!int.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var currentUserId))
+        if (!TryGetCurrentUserId(out var currentUserId))
             return Unauthorized();
 
         if (requestedUserId is null || requestedUserId == currentUserId)
@@ -107,7 +155,15 @@ public sealed class UsersController : ControllerBase
 
         return User.IsInRole("Admin") ? requestedUserId.Value : Forbid();
     }
+
+    private bool TryGetCurrentUserId(out int currentUserId) =>
+        int.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out currentUserId);
+
+    private static bool IsValidPasswordConfirmation(string password) =>
+        !string.IsNullOrWhiteSpace(password)
+        && password.Length <= UserInputLimits.PasswordMaxLength;
 }
 
-public sealed record UpdateUserRoleRequest(int UserId, string Role);
+public sealed record DeleteUserRequest(string CurrentPassword);
+public sealed record UpdateUserRoleRequest(int UserId, string Role, string CurrentPassword);
 public sealed record ChangePasswordRequest(string OldPassword, string NewPassword);

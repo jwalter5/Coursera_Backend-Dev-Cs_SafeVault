@@ -2,5 +2,5 @@
 
 SafeVaultAuth.showCurrentUser();
 SafeVaultAuth.bindChangePasswordDialog();
+SafeVaultAuth.bindDeleteAccountDialog();
 document.getElementById("logout").addEventListener("click", SafeVaultAuth.logout);
-document.getElementById("delete-account").addEventListener("click", SafeVaultAuth.deleteCurrentUser);

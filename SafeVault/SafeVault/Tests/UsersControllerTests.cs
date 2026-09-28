@@ -148,7 +148,7 @@ public class UsersControllerTests
         var user = CreateUser(repository, "current-user", "current@example.com");
         var controller = CreateController(repository, user.UserID.ToString(), user.Role);
 
-        var result = controller.Delete(null);
+        var result = controller.Delete(null, new DeleteUserRequest("password"));
 
         Assert.Multiple(() =>
         {
@@ -169,7 +169,7 @@ public class UsersControllerTests
         var otherUser = CreateUser(repository, "other-user", "other@example.com");
         var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
 
-        var result = controller.Delete(otherUser.UserID);
+        var result = controller.Delete(otherUser.UserID, new DeleteUserRequest("password"));
 
         Assert.Multiple(() =>
         {
@@ -188,7 +188,7 @@ public class UsersControllerTests
         var otherUser = CreateUser(repository, "other-user", "other@example.com");
         var controller = CreateController(repository, currentUser.UserID.ToString(), currentUser.Role);
 
-        var result = controller.Delete(otherUser.UserID);
+        var result = controller.Delete(otherUser.UserID, new DeleteUserRequest("password"));
 
         Assert.Multiple(() =>
         {
@@ -205,7 +205,7 @@ public class UsersControllerTests
         var admin = CreateUser(repository, "admin", "admin@example.com", "Admin");
         var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
 
-        var result = controller.Delete(999);
+        var result = controller.Delete(999, new DeleteUserRequest("password"));
 
         Assert.That(result, Is.TypeOf<NotFoundResult>());
     }
@@ -216,9 +216,43 @@ public class UsersControllerTests
         using var connection = CreateDatabase();
         var controller = CreateController(new UserRepository(connection), "not-a-number", "User");
 
-        var result = controller.Delete(null);
+        var result = controller.Delete(null, new DeleteUserRequest("password"));
 
         Assert.That(result, Is.TypeOf<UnauthorizedResult>());
+    }
+
+    [Test]
+    public void DeleteRejectsIncorrectCurrentPassword()
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var user = CreateUser(repository, "current-user", "current@example.com");
+        var controller = CreateController(repository, user.UserID.ToString(), user.Role);
+
+        var result = controller.Delete(null, new DeleteUserRequest("wrong-password"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(repository.GetById(user.UserID), Is.Not.Null);
+        });
+    }
+
+    [Test]
+    public void DeleteRejectsFinalAdministrator()
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var admin = CreateUser(repository, "admin", "admin@example.com", "Admin");
+        var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
+
+        var result = controller.Delete(null, new DeleteUserRequest("password"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.TypeOf<ConflictObjectResult>());
+            Assert.That(repository.GetById(admin.UserID)?.Role, Is.EqualTo("Admin"));
+        });
     }
 
     [TestCase("Admin")]
@@ -231,7 +265,7 @@ public class UsersControllerTests
         var user = CreateUser(repository, "target-user", "target@example.com");
         var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
 
-        var result = controller.UpdateRole(new UpdateUserRoleRequest(user.UserID, newRole));
+        var result = controller.UpdateRole(new UpdateUserRoleRequest(user.UserID, newRole, "password"));
 
         var response = (result.Result as OkObjectResult)?.Value as UserResponse;
         Assert.Multiple(() =>
@@ -252,7 +286,7 @@ public class UsersControllerTests
         var user = CreateUser(repository, "target-user", "target@example.com");
         var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
 
-        var result = controller.UpdateRole(new UpdateUserRoleRequest(user.UserID, invalidRole));
+        var result = controller.UpdateRole(new UpdateUserRoleRequest(user.UserID, invalidRole, "password"));
 
         Assert.Multiple(() =>
         {
@@ -272,7 +306,8 @@ public class UsersControllerTests
 
         var result = controller.UpdateRole(new UpdateUserRoleRequest(
             user.UserID,
-            new string('a', UserInputLimits.RoleMaxLength + 1)));
+            new string('a', UserInputLimits.RoleMaxLength + 1),
+            "password"));
 
         Assert.Multiple(() =>
         {
@@ -289,9 +324,68 @@ public class UsersControllerTests
         var admin = CreateUser(repository, "admin", "admin@example.com", "Admin");
         var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
 
-        var result = controller.UpdateRole(new UpdateUserRoleRequest(999, "Admin"));
+        var result = controller.UpdateRole(new UpdateUserRoleRequest(999, "Admin", "password"));
 
         Assert.That(result.Result, Is.TypeOf<NotFoundResult>());
+    }
+
+    [Test]
+    public void UpdateRoleRejectsIncorrectCurrentPassword()
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var admin = CreateUser(repository, "admin", "admin@example.com", "Admin");
+        var user = CreateUser(repository, "target-user", "target@example.com");
+        var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
+
+        var result = controller.UpdateRole(
+            new UpdateUserRoleRequest(user.UserID, "Admin", "wrong-password"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(repository.GetById(user.UserID)?.Role, Is.EqualTo("User"));
+        });
+    }
+
+    [Test]
+    public void UpdateRoleRejectsDemotingFinalAdministrator()
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var admin = CreateUser(repository, "admin", "admin@example.com", "Admin");
+        var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
+
+        var result = controller.UpdateRole(
+            new UpdateUserRoleRequest(admin.UserID, "User", "password"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Result, Is.TypeOf<ConflictObjectResult>());
+            Assert.That(repository.GetById(admin.UserID)?.Role, Is.EqualTo("Admin"));
+        });
+    }
+
+    [Test]
+    public void UpdateRoleReplacesCookieWhenAdministratorChangesOwnRole()
+    {
+        using var connection = CreateDatabase();
+        var repository = new UserRepository(connection);
+        var admin = CreateUser(repository, "admin", "admin@example.com", "Admin");
+        CreateUser(repository, "backup-admin", "backup@example.com", "Admin");
+        var controller = CreateController(repository, admin.UserID.ToString(), admin.Role);
+
+        var result = controller.UpdateRole(
+            new UpdateUserRoleRequest(admin.UserID, "User", "password"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Result, Is.TypeOf<OkObjectResult>());
+            Assert.That(repository.GetById(admin.UserID)?.Role, Is.EqualTo("User"));
+            Assert.That(
+                controller.Response.Headers.SetCookie.ToString(),
+                Does.StartWith($"{AuthenticationCookie.Name}="));
+        });
     }
 
     [Test]
@@ -311,6 +405,9 @@ public class UsersControllerTests
             Assert.That(repository.GetByCredentials(currentUser.Username, "password"), Is.Null);
             Assert.That(repository.GetByCredentials(currentUser.Username, "new-password"), Is.Not.Null);
             Assert.That(repository.GetByCredentials(otherUser.Username, "password"), Is.Not.Null);
+            Assert.That(
+                controller.Response.Headers.SetCookie.ToString(),
+                Does.StartWith($"{AuthenticationCookie.Name}="));
         });
     }
 
@@ -451,7 +548,15 @@ public class UsersControllerTests
         string subject,
         string role)
     {
-        return new UsersController(repository)
+        var settings = Options.Create(new JwtSettings
+        {
+            Key = "a-test-signing-key-that-is-at-least-thirty-two-bytes-long",
+            Issuer = "SafeVault.Tests",
+            Audience = "SafeVault.Tests",
+            ExpirationMinutes = 30
+        });
+
+        return new UsersController(repository, new JwtTokenService(settings))
         {
             ControllerContext = new ControllerContext
             {

@@ -85,7 +85,7 @@ public class UserRepositoryTests
         Assert.That(repository.GetById(user.UserID)?.Username, Is.EqualTo("test-user"));
         Assert.That(repository.GetAll(), Has.Count.EqualTo(1));
 
-        Assert.That(repository.UpdateRole(user.UserID, "Admin"), Is.True);
+        Assert.That(repository.UpdateRole(user.UserID, "Admin"), Is.EqualTo(UserMutationResult.Success));
         Assert.That(repository.GetById(user.UserID)?.Role, Is.EqualTo("Admin"));
         Assert.That(repository.GetById(user.UserID)?.Email, Is.EqualTo("test@example.com"));
         Assert.That(repository.GetByCredentials("test-user", "password"), Is.Not.Null);
@@ -97,7 +97,14 @@ public class UserRepositoryTests
         Assert.That(repository.GetByCredentials("test-user", "password"), Is.Null);
         Assert.That(repository.GetByCredentials("test-user", "new-password"), Is.Not.Null);
 
-        Assert.That(repository.Delete(user.UserID), Is.True);
+        repository.Create(new User
+        {
+            Username = "backup-admin",
+            Email = "backup-admin@example.com",
+            Password = "password",
+            Role = "Admin"
+        });
+        Assert.That(repository.Delete(user.UserID), Is.EqualTo(UserMutationResult.Success));
         Assert.That(repository.GetById(user.UserID), Is.Null);
     }
 
@@ -222,6 +229,33 @@ public class UserRepositoryTests
             Assert.That(
                 currentHasher.VerifyHashedPassword(user, upgradedHash!, password),
                 Is.EqualTo(PasswordVerificationResult.Success));
+        });
+    }
+
+    [Test]
+    public void FinalAdministratorCannotBeDemotedOrDeleted()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        CreateUsersTable(connection);
+        var repository = new UserRepository(connection);
+        var admin = new User
+        {
+            Username = "admin",
+            Email = "admin@example.com",
+            Password = "password",
+            Role = "Admin"
+        };
+        admin.UserID = repository.Create(admin);
+
+        var demoteResult = repository.UpdateRole(admin.UserID, "User");
+        var deleteResult = repository.Delete(admin.UserID);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(demoteResult, Is.EqualTo(UserMutationResult.LastAdministrator));
+            Assert.That(deleteResult, Is.EqualTo(UserMutationResult.LastAdministrator));
+            Assert.That(repository.GetById(admin.UserID)?.Role, Is.EqualTo("Admin"));
         });
     }
 

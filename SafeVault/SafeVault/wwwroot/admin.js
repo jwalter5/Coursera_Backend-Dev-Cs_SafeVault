@@ -4,6 +4,44 @@
     const page = document.getElementById("admin-page");
     const usersBody = document.getElementById("users");
     const statusMessage = document.getElementById("status-message");
+    const passwordDialog = document.getElementById("confirm-password-dialog");
+    const passwordForm = document.getElementById("confirm-password-form");
+    const passwordPrompt = document.getElementById("confirm-password-prompt");
+    const cancelPasswordButton = document.getElementById("cancel-password-confirmation");
+    let resolvePasswordConfirmation;
+
+    function finishPasswordConfirmation(password) {
+        if (!resolvePasswordConfirmation) {
+            return;
+        }
+
+        const resolve = resolvePasswordConfirmation;
+        resolvePasswordConfirmation = null;
+        passwordDialog.close();
+        resolve(password);
+    }
+
+    function requestCurrentPassword(message) {
+        passwordForm.reset();
+        passwordPrompt.textContent = message;
+        passwordDialog.showModal();
+        document.getElementById("admin-current-password").focus();
+
+        return new Promise(resolve => {
+            resolvePasswordConfirmation = resolve;
+        });
+    }
+
+    passwordForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const formData = new FormData(passwordForm);
+        finishPasswordConfirmation(formData.get("currentPassword"));
+    });
+    cancelPasswordButton.addEventListener("click", () => finishPasswordConfirmation(null));
+    passwordDialog.addEventListener("cancel", event => {
+        event.preventDefault();
+        finishPasswordConfirmation(null);
+    });
 
     function showError(message) {
         statusMessage.classList.add("error");
@@ -34,6 +72,13 @@
         saveButton.type = "button";
         saveButton.textContent = "Speichern";
         saveButton.addEventListener("click", async () => {
+            const currentPassword = await requestCurrentPassword(
+                `Bestätige die Rollenänderung für ${user.username} mit deinem Passwort.`);
+            if (currentPassword === null) {
+                select.value = user.role;
+                return;
+            }
+
             saveButton.disabled = true;
             statusMessage.classList.remove("error");
             statusMessage.textContent = `Rolle für ${user.username} wird gespeichert …`;
@@ -44,7 +89,11 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ userId: user.userId, role: select.value })
+                    body: JSON.stringify({
+                        userId: user.userId,
+                        role: select.value,
+                        currentPassword
+                    })
                 });
 
                 if (!response || response.status === 401 || response.status === 403) {
@@ -83,6 +132,12 @@
                 return;
             }
 
+            const currentPassword = await requestCurrentPassword(
+                `Bestätige das Löschen von ${user.username} mit deinem Passwort.`);
+            if (currentPassword === null) {
+                return;
+            }
+
             deleteButton.disabled = true;
             statusMessage.classList.remove("error");
             statusMessage.textContent = `${user.username} wird gelöscht …`;
@@ -90,7 +145,11 @@
             try {
                 const response = await SafeVaultAuth.fetchWithAuth("/api/users", {
                     method: "DELETE",
-                    headers: { id: user.userId }
+                    headers: {
+                        "Content-Type": "application/json",
+                        id: user.userId
+                    },
+                    body: JSON.stringify({ currentPassword })
                 });
 
                 if (!response || response.status === 401 || response.status === 403) {

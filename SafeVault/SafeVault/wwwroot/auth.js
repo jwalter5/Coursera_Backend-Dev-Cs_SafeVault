@@ -185,43 +185,68 @@ window.SafeVaultAuth = (() => {
         });
     }
 
-    async function deleteCurrentUser() {
-        if (!window.confirm("Möchtest du dein Konto wirklich unwiderruflich löschen?")) {
-            return;
-        }
-
+    function bindDeleteAccountDialog() {
+        const dialog = document.getElementById("delete-account-dialog");
+        const form = document.getElementById("delete-account-form");
+        const openButton = document.getElementById("delete-account");
+        const cancelButton = document.getElementById("cancel-delete-account");
         const deleteButton = document.getElementById("delete-account");
         const statusMessage = document.getElementById("account-status");
-        deleteButton.disabled = true;
-        statusMessage.classList.remove("error");
-        statusMessage.textContent = "Konto wird gelöscht …";
+        const errorMessage = document.getElementById("delete-account-error");
 
-        try {
-            const response = await fetchWithAuth("/api/users", { method: "DELETE" });
-            if (!response || response.status === 401) {
-                await logout();
-                return;
+        openButton.addEventListener("click", () => {
+            form.reset();
+            errorMessage.hidden = true;
+            dialog.showModal();
+        });
+
+        cancelButton.addEventListener("click", () => dialog.close());
+
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+            errorMessage.hidden = true;
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            deleteButton.disabled = true;
+            statusMessage.classList.remove("error");
+            statusMessage.textContent = "Konto wird gelöscht …";
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetchWithAuth("/api/users", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ currentPassword: formData.get("currentPassword") })
+                });
+                if (!response || response.status === 401) {
+                    await logout();
+                    return;
+                }
+
+                if (!response.ok) {
+                    const result = await response.json().catch(() => ({}));
+                    errorMessage.textContent = result.message ?? "Das Konto konnte nicht gelöscht werden.";
+                    errorMessage.hidden = false;
+                    statusMessage.textContent = "";
+                    return;
+                }
+
+                window.location.reload();
+            } catch {
+                errorMessage.textContent = "SafeVault ist momentan nicht erreichbar.";
+                errorMessage.hidden = false;
+                statusMessage.textContent = "";
+            } finally {
+                submitButton.disabled = false;
+                deleteButton.disabled = false;
             }
-
-            if (!response.ok) {
-                statusMessage.classList.add("error");
-                statusMessage.textContent = "Das Konto konnte nicht gelöscht werden.";
-                return;
-            }
-
-            window.location.reload();
-        } catch {
-            statusMessage.classList.add("error");
-            statusMessage.textContent = "SafeVault ist momentan nicht erreichbar.";
-        } finally {
-            deleteButton.disabled = false;
-        }
+        });
     }
 
     return {
         bindForm,
         bindChangePasswordDialog,
-        deleteCurrentUser,
+        bindDeleteAccountDialog,
         fetchWithAuth,
         getCurrentUser,
         logout,

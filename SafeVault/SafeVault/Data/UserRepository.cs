@@ -73,21 +73,7 @@ public class UserRepository
             user = ReadUser(reader);
         }
 
-        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
-
-        if (verificationResult == PasswordVerificationResult.Failed)
-            return null;
-
-        if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
-        {
-            var previousHash = user.Password;
-            var upgradedHash = _passwordHasher.HashPassword(user, password);
-
-            if (UpdatePasswordHash(user.UserID, previousHash, upgradedHash))
-                user.Password = upgradedHash;
-        }
-
-        return user;
+        return VerifyPassword(user, password) ? user : null;
     }
 
     public User? GetByUsername(string username)
@@ -131,14 +117,34 @@ public class UserRepository
         return users;
     }
 
-    public bool UpdateRole(int userId, string role)
+    public UserMutationResult UpdateRole(int userId, string role)
     {
         using var command = _connection.CreateCommand();
-        command.CommandText = "UPDATE Users SET Role = $role WHERE UserID = $userId;";
+        command.CommandText =
+            """
+            UPDATE Users
+            SET Role = $role
+            WHERE UserID = $userId
+              AND (
+                  Role <> 'Admin'
+                  OR $role = 'Admin'
+                  OR EXISTS (
+                      SELECT 1
+                      FROM Users AS OtherAdmins
+                      WHERE OtherAdmins.Role = 'Admin'
+                        AND OtherAdmins.UserID <> $userId
+                  )
+              );
+            """;
         command.Parameters.AddWithValue("$role", role);
         command.Parameters.AddWithValue("$userId", userId);
 
-        return command.ExecuteNonQuery() == 1;
+        if (command.ExecuteNonQuery() == 1)
+            return UserMutationResult.Success;
+
+        return GetById(userId) is null
+            ? UserMutationResult.NotFound
+            : UserMutationResult.LastAdministrator;
     }
 
     public bool ChangePassword(int userId, string oldPassword, string newPassword)
@@ -164,13 +170,55 @@ public class UserRepository
         return command.ExecuteNonQuery() == 1;
     }
 
-    public bool Delete(int userId)
+    public bool VerifyPassword(int userId, string password)
+    {
+        var user = GetById(userId);
+        return user is not null && VerifyPassword(user, password);
+    }
+
+    public UserMutationResult Delete(int userId)
     {
         using var command = _connection.CreateCommand();
-        command.CommandText = "DELETE FROM Users WHERE UserID = $userId;";
+        command.CommandText =
+            """
+            DELETE FROM Users
+            WHERE UserID = $userId
+              AND (
+                  Role <> 'Admin'
+                  OR EXISTS (
+                      SELECT 1
+                      FROM Users AS OtherAdmins
+                      WHERE OtherAdmins.Role = 'Admin'
+                        AND OtherAdmins.UserID <> $userId
+                  )
+              );
+            """;
         command.Parameters.AddWithValue("$userId", userId);
 
-        return command.ExecuteNonQuery() == 1;
+        if (command.ExecuteNonQuery() == 1)
+            return UserMutationResult.Success;
+
+        return GetById(userId) is null
+            ? UserMutationResult.NotFound
+            : UserMutationResult.LastAdministrator;
+    }
+
+    private bool VerifyPassword(User user, string password)
+    {
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
+        if (verificationResult == PasswordVerificationResult.Failed)
+            return false;
+
+        if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            var previousHash = user.Password;
+            var upgradedHash = _passwordHasher.HashPassword(user, password);
+
+            if (UpdatePasswordHash(user.UserID, previousHash, upgradedHash))
+                user.Password = upgradedHash;
+        }
+
+        return true;
     }
 
     private bool UpdatePasswordHash(int userId, string previousHash, string upgradedHash)
@@ -204,4 +252,11 @@ public class UserRepository
             Role = reader.GetString(4)
         };
     }
+}
+
+public enum UserMutationResult
+{
+    Success,
+    NotFound,
+    LastAdministrator
 }

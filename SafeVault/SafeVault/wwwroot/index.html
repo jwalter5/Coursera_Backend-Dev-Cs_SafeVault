@@ -60,6 +60,22 @@
             </div>
         </form>
     </dialog>
+
+    <dialog id="delete-account-dialog" aria-labelledby="delete-account-title">
+        <form id="delete-account-form">
+            <h2 id="delete-account-title">Konto löschen</h2>
+            <p>Diese Aktion kann nicht rückgängig gemacht werden. Bestätige sie mit deinem aktuellen Passwort.</p>
+
+            <label for="delete-current-password">Aktuelles Passwort</label>
+            <input type="password" id="delete-current-password" name="currentPassword" autocomplete="current-password" maxlength="128" required>
+
+            <p id="delete-account-error" class="error" role="alert" hidden></p>
+            <div class="dialog-actions">
+                <button id="cancel-delete-account" class="button-secondary" type="button">Abbrechen</button>
+                <button class="button-danger" type="submit">Konto endgültig löschen</button>
+            </div>
+        </form>
+    </dialog>
     <script src="/auth.js"></script>
     <script src="/index.js"></script>
 </body>

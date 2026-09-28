@@ -10,8 +10,16 @@ minutes. The browser cannot read the token, and the logout endpoint expires its 
 Authenticated users can get or delete their own account through `/api/users`; the user ID is read
 from the token's `sub` claim. Administrators can target another account for those operations by
 supplying its ID in the `id` request header. `GET /api/users/all` and role changes require the
-`Admin` role. Role changes use `PUT /api/users/role` with the target `userId` and new `role` in the
-request body. Usernames and email addresses cannot be changed.
+`Admin` role. Role changes use `PUT /api/users/role` with the target `userId`, new `role`, and the
+acting administrator's `currentPassword` in the request body. Account deletion likewise requires
+`{ "currentPassword": "..." }` in the request body. The final administrator cannot be deleted or
+demoted. Usernames and email addresses cannot be changed.
+
+Changing a password replaces the browser's authentication cookie with a newly issued JWT. Every
+JWT contains a unique `jti`, so the replacement token is distinct even when two tokens are issued
+within the same second. Because JWT validation remains stateless, tokens copied before a password
+change remain valid until their normal expiration; immediate revocation would require a server-side
+token version or revocation store.
 
 Logged-in administrators can open `/admin.html` from the homepage to view all users and
 change their roles. Role-based permissions follow the JWT and therefore change after the affected

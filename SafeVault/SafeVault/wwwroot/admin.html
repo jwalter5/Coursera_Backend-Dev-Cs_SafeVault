@@ -29,6 +29,21 @@
 
         <a class="back-link" href="/">Zurück zur Homepage</a>
     </main>
+
+    <dialog id="confirm-password-dialog" aria-labelledby="confirm-password-title">
+        <form id="confirm-password-form">
+            <h2 id="confirm-password-title">Aktion bestätigen</h2>
+            <p id="confirm-password-prompt"></p>
+
+            <label for="admin-current-password">Aktuelles Passwort</label>
+            <input type="password" id="admin-current-password" name="currentPassword" autocomplete="current-password" maxlength="128" required>
+
+            <div class="dialog-actions">
+                <button id="cancel-password-confirmation" class="button-secondary" type="button">Abbrechen</button>
+                <button type="submit">Bestätigen</button>
+            </div>
+        </form>
+    </dialog>
     <script src="/auth.js"></script>
     <script src="/admin.js"></script>
 </body>
