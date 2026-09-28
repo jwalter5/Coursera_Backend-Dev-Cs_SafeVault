@@ -24,8 +24,8 @@ public sealed class UsersController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpGet("all")]
-    public ActionResult<IReadOnlyList<UserResponse>> GetAll() =>
-        Ok(_userRepository.GetAll().Select(UserResponse.FromUser));
+    public ActionResult<IReadOnlyList<AdminUserResponse>> GetAll() =>
+        Ok(_userRepository.GetAll().Select(AdminUserResponse.FromUser));
 
     [HttpGet]
     public ActionResult<UserResponse> GetById([FromHeader(Name = "id")] int? requestedUserId)
@@ -202,3 +202,24 @@ public sealed record UpdateUserRoleRequest(int UserId, string Role, string Curre
 public sealed record ChangePasswordRequest(string OldPassword, string NewPassword);
 public sealed record SavePersonalDataRequest(string PersonalData);
 public sealed record PersonalDataResponse(string PersonalData);
+public sealed record AdminUserResponse(int UserId, string Username, string Email, string Role)
+{
+    public static AdminUserResponse FromUser(User user) =>
+        new(user.UserID, user.Username, MaskEmail(user.Email), user.Role);
+
+    private static string MaskEmail(string email)
+    {
+        var atIndex = email.IndexOf('@');
+        var lastDotIndex = email.LastIndexOf('.');
+
+        if (atIndex <= 0 || lastDotIndex <= atIndex + 1)
+            return email;
+
+        var localPart = email[..atIndex];
+        var domain = email[(atIndex + 1)..lastDotIndex];
+        var topLevelDomain = email[lastDotIndex..];
+
+        return $"{localPart[0]}{new string('*', localPart.Length - 1)}"
+            + $"@{domain[0]}{new string('*', domain.Length - 1)}{topLevelDomain}";
+    }
+}

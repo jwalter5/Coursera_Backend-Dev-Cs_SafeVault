@@ -59,13 +59,15 @@ public class UsersControllerTests
         var result = controller.GetAll();
 
         var okResult = result.Result as OkObjectResult;
-        var users = (okResult?.Value as IEnumerable<UserResponse>)?.ToList();
+        var users = (okResult?.Value as IEnumerable<AdminUserResponse>)?.ToList();
         Assert.Multiple(() =>
         {
             Assert.That(okResult, Is.Not.Null);
             Assert.That(users, Has.Count.EqualTo(2));
             Assert.That(users?.Select(user => user.Username),
                 Is.EquivalentTo(new[] { "admin", "regular-user" }));
+            Assert.That(users?.Select(user => user.Email),
+                Is.EquivalentTo(new[] { "a****@e******.com", "u***@e******.com" }));
         });
     }
 
