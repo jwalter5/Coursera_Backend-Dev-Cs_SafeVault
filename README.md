@@ -24,11 +24,9 @@ acting administrator's `currentPassword` in the request body. Account deletion l
 `{ "currentPassword": "..." }` in the request body. The final administrator cannot be deleted or
 demoted. Usernames and email addresses cannot be changed.
 
-Changing a password replaces the browser's authentication cookie with a newly issued JWT. Every
-JWT contains a unique `jti`, so the replacement token is distinct even when two tokens are issued
-within the same second. Because JWT validation remains stateless, tokens copied before a password
-change remain valid until their normal expiration; immediate revocation would require a server-side
-token version or revocation store.
+Changing a password replaces the browser's authentication cookie with a newly issued JWT. Because 
+JWT validation remains stateless, tokens copied before a password change remain valid until their 
+normal expiration; immediate revocation would require a server-side token version or revocation store.
 
 Logged-in administrators can open `/admin.html` from the homepage to view all users and
 change their roles. Role-based permissions follow the JWT and therefore change after the affected
