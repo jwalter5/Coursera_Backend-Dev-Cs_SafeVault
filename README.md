@@ -7,6 +7,7 @@ Functionalities:
  - Login/Logout with existing users
  - Change Password or delete account for user-role authorization
  - Manage other users with the admin-role (view all users, change role, delete account)
+
 For simplicity, an in-memory database is used.
 
 ## Authentication
