@@ -64,14 +64,30 @@ public class UserRepository
             """;
         command.Parameters.AddWithValue("$username", username);
 
-        using var reader = command.ExecuteReader();
-        if (!reader.Read())
-            return null;
+        User user;
+        using (var reader = command.ExecuteReader())
+        {
+            if (!reader.Read())
+                return null;
 
-        var user = ReadUser(reader);
+            user = ReadUser(reader);
+        }
+
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
 
-        return verificationResult == PasswordVerificationResult.Failed ? null : user;
+        if (verificationResult == PasswordVerificationResult.Failed)
+            return null;
+
+        if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            var previousHash = user.Password;
+            var upgradedHash = _passwordHasher.HashPassword(user, password);
+
+            if (UpdatePasswordHash(user.UserID, previousHash, upgradedHash))
+                user.Password = upgradedHash;
+        }
+
+        return user;
     }
 
     public User? GetByUsername(string username)
@@ -153,6 +169,18 @@ public class UserRepository
         using var command = _connection.CreateCommand();
         command.CommandText = "DELETE FROM Users WHERE UserID = $userId;";
         command.Parameters.AddWithValue("$userId", userId);
+
+        return command.ExecuteNonQuery() == 1;
+    }
+
+    private bool UpdatePasswordHash(int userId, string previousHash, string upgradedHash)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText =
+            "UPDATE Users SET Password = $upgradedHash WHERE UserID = $userId AND Password = $previousHash;";
+        command.Parameters.AddWithValue("$upgradedHash", upgradedHash);
+        command.Parameters.AddWithValue("$userId", userId);
+        command.Parameters.AddWithValue("$previousHash", previousHash);
 
         return command.ExecuteNonQuery() == 1;
     }

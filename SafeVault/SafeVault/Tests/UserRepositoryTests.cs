@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using SafeVault.Data;
 using SafeVault.Models;
@@ -166,6 +168,60 @@ public class UserRepositoryTests
             Assert.That(changed, Is.False);
             Assert.That(repository.GetByCredentials(user.Username, "password"), Is.Not.Null);
             Assert.That(repository.GetByCredentials(user.Username, overlongPassword), Is.Null);
+        });
+    }
+
+    [Test]
+    public void GetByCredentialsUpgradesPasswordHashWhenRehashIsNeeded()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        CreateUsersTable(connection);
+
+        const string password = "password";
+        var user = new User
+        {
+            Username = "legacy-user",
+            Email = "legacy@example.com",
+            Password = password,
+            Role = "User"
+        };
+        var legacyHasher = new PasswordHasher<User>(Options.Create(new PasswordHasherOptions
+        {
+            IterationCount = 10_000
+        }));
+        var legacyHash = legacyHasher.HashPassword(user, password);
+
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText =
+                """
+                INSERT INTO Users (Username, Email, Password, Role)
+                VALUES ($username, $email, $password, $role);
+                """;
+            command.Parameters.AddWithValue("$username", user.Username);
+            command.Parameters.AddWithValue("$email", user.Email);
+            command.Parameters.AddWithValue("$password", legacyHash);
+            command.Parameters.AddWithValue("$role", user.Role);
+            command.ExecuteNonQuery();
+        }
+
+        var authenticatedUser = new UserRepository(connection)
+            .GetByCredentials(user.Username, password);
+
+        using var hashCommand = connection.CreateCommand();
+        hashCommand.CommandText = "SELECT Password FROM Users WHERE Username = $username;";
+        hashCommand.Parameters.AddWithValue("$username", user.Username);
+        var upgradedHash = (string?)hashCommand.ExecuteScalar();
+
+        var currentHasher = new PasswordHasher<User>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(authenticatedUser, Is.Not.Null);
+            Assert.That(upgradedHash, Is.Not.Null.And.Not.EqualTo(legacyHash));
+            Assert.That(
+                currentHasher.VerifyHashedPassword(user, upgradedHash!, password),
+                Is.EqualTo(PasswordVerificationResult.Success));
         });
     }
 
