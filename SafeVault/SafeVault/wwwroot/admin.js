@@ -55,11 +55,11 @@
         const label = document.createElement("label");
         label.className = "visually-hidden";
         label.htmlFor = `role-${user.userId}`;
-        label.textContent = `Rolle für ${user.username}`;
+        label.textContent = `Role for ${user.username}`;
 
         const select = document.createElement("select");
         select.id = `role-${user.userId}`;
-        select.setAttribute("aria-label", `Rolle für ${user.username}`);
+        select.setAttribute("aria-label", `Role for ${user.username}`);
         for (const role of ["User", "Admin"]) {
             const option = document.createElement("option");
             option.value = role;
@@ -70,10 +70,10 @@
 
         const saveButton = document.createElement("button");
         saveButton.type = "button";
-        saveButton.textContent = "Speichern";
+        saveButton.textContent = "Save";
         saveButton.addEventListener("click", async () => {
             const currentPassword = await requestCurrentPassword(
-                `Bestätige die Rollenänderung für ${user.username} mit deinem Passwort.`);
+                `Confirm the role change for ${user.username} with your password.`);
             if (currentPassword === null) {
                 select.value = user.role;
                 return;
@@ -81,7 +81,7 @@
 
             saveButton.disabled = true;
             statusMessage.classList.remove("error");
-            statusMessage.textContent = `Rolle für ${user.username} wird gespeichert …`;
+            statusMessage.textContent = `Saving the role for ${user.username} …`;
 
             try {
                 const response = await SafeVaultAuth.fetchWithAuth("/api/users/role", {
@@ -103,14 +103,14 @@
 
                 if (!response.ok) {
                     const result = await response.json().catch(() => ({}));
-                    showError(result.message ?? "Die Rolle konnte nicht gespeichert werden.");
+                    showError(result.message ?? "The role could not be saved.");
                     return;
                 }
 
                 user.role = select.value;
-                statusMessage.textContent = `Rolle für ${user.username} wurde gespeichert.`;
+                statusMessage.textContent = `The role for ${user.username} has been saved.`;
             } catch {
-                showError("SafeVault ist momentan nicht erreichbar.");
+                showError("SafeVault is currently unavailable.");
             } finally {
                 saveButton.disabled = false;
             }
@@ -124,23 +124,23 @@
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
         deleteButton.className = "button-danger";
-        deleteButton.textContent = "Löschen";
-        deleteButton.setAttribute("aria-label", `${user.username} löschen`);
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute("aria-label", `Delete ${user.username}`);
 
         deleteButton.addEventListener("click", async () => {
-            if (!window.confirm(`Möchtest du ${user.username} wirklich unwiderruflich löschen?`)) {
+            if (!window.confirm(`Are you sure you want to permanently delete ${user.username}?`)) {
                 return;
             }
 
             const currentPassword = await requestCurrentPassword(
-                `Bestätige das Löschen von ${user.username} mit deinem Passwort.`);
+                `Confirm the deletion of ${user.username} with your password.`);
             if (currentPassword === null) {
                 return;
             }
 
             deleteButton.disabled = true;
             statusMessage.classList.remove("error");
-            statusMessage.textContent = `${user.username} wird gelöscht …`;
+            statusMessage.textContent = `Deleting ${user.username} …`;
 
             try {
                 const response = await SafeVaultAuth.fetchWithAuth("/api/users", {
@@ -159,7 +159,7 @@
 
                 if (!response.ok) {
                     const result = await response.json().catch(() => ({}));
-                    showError(result.message ?? `${user.username} konnte nicht gelöscht werden.`);
+                    showError(result.message ?? `${user.username} could not be deleted.`);
                     return;
                 }
 
@@ -169,9 +169,9 @@
                 }
 
                 row.remove();
-                statusMessage.textContent = `${user.username} wurde gelöscht.`;
+                statusMessage.textContent = `${user.username} has been deleted.`;
             } catch {
-                showError("SafeVault ist momentan nicht erreichbar.");
+                showError("SafeVault is currently unavailable.");
             } finally {
                 deleteButton.disabled = false;
             }
@@ -217,7 +217,7 @@
             }
 
             if (!response.ok) {
-                showError("Die Benutzerliste konnte nicht geladen werden.");
+                showError("The user list could not be loaded.");
                 page.hidden = false;
                 return;
             }
@@ -225,7 +225,7 @@
             renderUsers(await response.json(), currentUser.userId);
             page.hidden = false;
         } catch {
-            showError("SafeVault ist momentan nicht erreichbar.");
+            showError("SafeVault is currently unavailable.");
             page.hidden = false;
         }
     }

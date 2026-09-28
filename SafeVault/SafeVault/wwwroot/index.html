@@ -1,43 +1,43 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SafeVault</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/styles.css?v=4">
 </head>
 <body>
     <main class="card">
         <h1>SafeVault</h1>
         <section id="guest-view" hidden>
-            <p>Willkommen bei SafeVault. Erstelle ein Konto oder melde dich an.</p>
+            <p>Welcome to SafeVault. Create an account or log in.</p>
 
-            <nav class="actions" aria-label="Benutzerkonto">
-                <a class="button" href="/register.html">Registrieren</a>
-                <a class="button button-secondary" href="/login.html">Anmelden</a>
+            <nav class="actions" aria-label="User account">
+                <a class="button" href="/register.html">Register</a>
+                <a class="button button-secondary" href="/login.html">Log in</a>
             </nav>
         </section>
 
         <section id="user-view" hidden>
-            <h2>Benutzerkonto</h2>
+            <h2>User Account</h2>
             <dl class="user-information">
-                <dt>Benutzername</dt>
+                <dt>Username</dt>
                 <dd id="username"></dd>
-                <dt>E-Mail-Adresse</dt>
+                <dt>Email Address</dt>
                 <dd id="email"></dd>
-                <dt>Rolle</dt>
+                <dt>Role</dt>
                 <dd id="role"></dd>
             </dl>
             <div class="actions">
-                <button id="open-personal-data" type="button">Persönliche Daten anzeigen</button>
+                <button id="open-personal-data" type="button">View Personal Data</button>
             </div>
             <nav id="admin-actions" class="actions" aria-label="Administration" hidden>
-                <a class="button" href="/admin.html">Benutzer verwalten</a>
+                <a class="button" href="/admin.html">Manage Users</a>
             </nav>
             <div class="actions">
                 <button id="open-change-password" class="button-secondary" type="button">Change Password</button>
-                <button id="logout" type="button">Abmelden</button>
-                <button id="delete-account" class="button-danger" type="button">Konto löschen</button>
+                <button id="logout" type="button">Log Out</button>
+                <button id="delete-account" class="button-danger" type="button">Delete Account</button>
             </div>
             <p id="account-status" class="status" role="status" aria-live="polite"></p>
         </section>
@@ -45,66 +45,66 @@
 
     <dialog id="personal-data-unlock-dialog" aria-labelledby="personal-data-unlock-title">
         <form id="unlock-personal-data-form">
-            <h2 id="personal-data-unlock-title">Persönliche Daten anzeigen</h2>
-            <p>Bestätige deine Identität mit deinem aktuellen Passwort.</p>
+            <h2 id="personal-data-unlock-title">View Personal Data</h2>
+            <p>Confirm your identity with your current password.</p>
 
-            <label for="personal-data-password">Aktuelles Passwort</label>
+            <label for="personal-data-password">Current Password</label>
             <input type="password" id="personal-data-password" name="currentPassword" autocomplete="current-password" maxlength="128" required>
 
             <p id="personal-data-unlock-error" class="error" role="alert" hidden></p>
             <div class="dialog-actions">
-                <button id="cancel-personal-data-unlock" class="button-secondary" type="button">Abbrechen</button>
-                <button type="submit">Daten anzeigen</button>
+                <button id="cancel-personal-data-unlock" class="button-secondary" type="button">Cancel</button>
+                <button type="submit">View Data</button>
             </div>
         </form>
     </dialog>
 
     <dialog id="personal-data-dialog" aria-labelledby="personal-data-title">
         <form id="personal-data-form">
-            <h2 id="personal-data-title">Persönliche Daten</h2>
-            <textarea id="personal-data" name="personalData" rows="10" maxlength="4096" aria-label="Persönliche Daten" aria-describedby="personal-data-help"></textarea>
-            <small id="personal-data-help">Nur du kannst diese verschlüsselten Daten lesen (maximal 4096 Zeichen).</small>
+            <h2 id="personal-data-title">Personal Data</h2>
+            <textarea id="personal-data" name="personalData" rows="10" maxlength="4096" aria-label="Personal data" aria-describedby="personal-data-help"></textarea>
+            <small id="personal-data-help">Only you can read this encrypted data (maximum 4,096 characters).</small>
             <p id="personal-data-status" class="status" role="status" aria-live="polite"></p>
             <div class="dialog-actions">
-                <button id="close-personal-data" class="button-secondary" type="button">Schließen</button>
-                <button type="submit">Speichern</button>
+                <button id="close-personal-data" class="button-secondary" type="button">Close</button>
+                <button type="submit">Save</button>
             </div>
         </form>
     </dialog>
 
     <dialog id="change-password-dialog" aria-labelledby="change-password-title">
         <form id="change-password-form">
-            <h2 id="change-password-title">Passwort ändern</h2>
+            <h2 id="change-password-title">Change Password</h2>
 
-            <label for="old-password">Altes Passwort</label>
+            <label for="old-password">Old Password</label>
             <input type="password" id="old-password" name="oldPassword" autocomplete="current-password" maxlength="128" required>
 
-            <label for="new-password">Neues Passwort</label>
+            <label for="new-password">New Password</label>
             <input type="password" id="new-password" name="newPassword" autocomplete="new-password" maxlength="128" required>
 
-            <label for="confirm-new-password">Neues Passwort wiederholen</label>
+            <label for="confirm-new-password">Confirm New Password</label>
             <input type="password" id="confirm-new-password" name="confirmNewPassword" autocomplete="new-password" maxlength="128" required>
 
             <p id="change-password-error" class="error" role="alert" hidden></p>
             <div class="dialog-actions">
-                <button id="cancel-change-password" class="button-secondary" type="button">Abbrechen</button>
-                <button type="submit">Passwort ändern</button>
+                <button id="cancel-change-password" class="button-secondary" type="button">Cancel</button>
+                <button type="submit">Change Password</button>
             </div>
         </form>
     </dialog>
 
     <dialog id="delete-account-dialog" aria-labelledby="delete-account-title">
         <form id="delete-account-form">
-            <h2 id="delete-account-title">Konto löschen</h2>
-            <p>Diese Aktion kann nicht rückgängig gemacht werden. Bestätige sie mit deinem aktuellen Passwort.</p>
+            <h2 id="delete-account-title">Delete Account</h2>
+            <p>This action cannot be undone. Confirm it with your current password.</p>
 
-            <label for="delete-current-password">Aktuelles Passwort</label>
+            <label for="delete-current-password">Current Password</label>
             <input type="password" id="delete-current-password" name="currentPassword" autocomplete="current-password" maxlength="128" required>
 
             <p id="delete-account-error" class="error" role="alert" hidden></p>
             <div class="dialog-actions">
-                <button id="cancel-delete-account" class="button-secondary" type="button">Abbrechen</button>
-                <button class="button-danger" type="submit">Konto endgültig löschen</button>
+                <button id="cancel-delete-account" class="button-secondary" type="button">Cancel</button>
+                <button class="button-danger" type="submit">Permanently Delete Account</button>
             </div>
         </form>
     </dialog>

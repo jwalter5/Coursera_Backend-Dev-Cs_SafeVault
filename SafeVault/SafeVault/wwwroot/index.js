@@ -70,7 +70,7 @@ personalDataUnlockForm.addEventListener("submit", async event => {
         }
         if (!response.ok) {
             const result = await response.json().catch(() => ({}));
-            personalDataUnlockError.textContent = result.message ?? "Die persönlichen Daten konnten nicht geladen werden.";
+            personalDataUnlockError.textContent = result.message ?? "The personal data could not be loaded.";
             personalDataUnlockError.hidden = false;
             return;
         }
@@ -81,7 +81,7 @@ personalDataUnlockForm.addEventListener("submit", async event => {
         personalDataDialog.showModal();
         personalDataInput.focus();
     } catch {
-        personalDataUnlockError.textContent = "SafeVault ist momentan nicht erreichbar.";
+        personalDataUnlockError.textContent = "SafeVault is currently unavailable.";
         personalDataUnlockError.hidden = false;
     } finally {
         submitButton.disabled = false;
@@ -93,7 +93,7 @@ personalDataForm.addEventListener("submit", async event => {
     const submitButton = personalDataForm.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     personalDataStatus.classList.remove("error");
-    personalDataStatus.textContent = "Daten werden gespeichert …";
+    personalDataStatus.textContent = "Saving data …";
 
     try {
         const response = await SafeVaultAuth.fetchWithAuth("/api/users/personal-data", {
@@ -104,12 +104,12 @@ personalDataForm.addEventListener("submit", async event => {
 
         if (!response.ok) {
             const result = await response.json().catch(() => ({}));
-            throw new Error(result.message ?? "Die persönlichen Daten konnten nicht gespeichert werden.");
+            throw new Error(result.message ?? "The personal data could not be saved.");
         }
-        personalDataStatus.textContent = "Die persönlichen Daten wurden gespeichert.";
+        personalDataStatus.textContent = "The personal data has been saved.";
     } catch (error) {
         personalDataStatus.classList.add("error");
-        personalDataStatus.textContent = error.message ?? "SafeVault ist momentan nicht erreichbar.";
+        personalDataStatus.textContent = error.message ?? "SafeVault is currently unavailable.";
     } finally {
         submitButton.disabled = false;
     }

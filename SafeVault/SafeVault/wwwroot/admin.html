@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Benutzerverwaltung | SafeVault</title>
-    <link rel="stylesheet" href="/styles.css">
+    <title>User Management | SafeVault</title>
+    <link rel="stylesheet" href="/styles.css?v=4">
 </head>
 <body>
     <main id="admin-page" class="card card-wide" hidden>
-        <h1>Benutzerverwaltung</h1>
-        <p>Hier können Administratoren die Rollen aller Benutzer verwalten oder Benutzer löschen.</p>
+        <h1>User Management</h1>
+        <p>Administrators can manage user roles or delete users here.</p>
 
         <p id="status-message" class="status" role="status" aria-live="polite"></p>
         <div class="table-wrapper">
@@ -17,30 +17,30 @@
                 <thead>
                     <tr>
                         <th scope="col">ID</th>
-                        <th scope="col">Benutzername</th>
-                        <th scope="col">E-Mail-Adresse</th>
-                        <th scope="col">Rolle</th>
-                        <th scope="col">Aktionen</th>
+                        <th scope="col">Username</th>
+                        <th scope="col">Email Address</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="users"></tbody>
             </table>
         </div>
 
-        <a class="back-link" href="/">Zurück zur Homepage</a>
+        <a class="back-link" href="/">Back to Home</a>
     </main>
 
     <dialog id="confirm-password-dialog" aria-labelledby="confirm-password-title">
         <form id="confirm-password-form">
-            <h2 id="confirm-password-title">Aktion bestätigen</h2>
+            <h2 id="confirm-password-title">Confirm Action</h2>
             <p id="confirm-password-prompt"></p>
 
-            <label for="admin-current-password">Aktuelles Passwort</label>
+            <label for="admin-current-password">Current Password</label>
             <input type="password" id="admin-current-password" name="currentPassword" autocomplete="current-password" maxlength="128" required>
 
             <div class="dialog-actions">
-                <button id="cancel-password-confirmation" class="button-secondary" type="button">Abbrechen</button>
-                <button type="submit">Bestätigen</button>
+                <button id="cancel-password-confirmation" class="button-secondary" type="button">Cancel</button>
+                <button type="submit">Confirm</button>
             </div>
         </form>
     </dialog>

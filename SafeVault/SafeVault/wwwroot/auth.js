@@ -98,14 +98,14 @@ window.SafeVaultAuth = (() => {
                 const result = await response.json();
 
                 if (!response.ok) {
-                    errorMessage.textContent = result.message ?? "Die Anfrage konnte nicht verarbeitet werden.";
+                    errorMessage.textContent = result.message ?? "The request could not be processed.";
                     errorMessage.hidden = false;
                     return;
                 }
 
                 window.location.assign("/");
             } catch {
-                errorMessage.textContent = "SafeVault ist momentan nicht erreichbar.";
+                errorMessage.textContent = "SafeVault is currently unavailable.";
                 errorMessage.hidden = false;
             }
         });
@@ -141,7 +141,7 @@ window.SafeVaultAuth = (() => {
             const formData = new FormData(form);
             const newPassword = formData.get("newPassword");
             if (newPassword !== formData.get("confirmNewPassword")) {
-                errorMessage.textContent = "Die neuen Passwörter stimmen nicht überein.";
+                errorMessage.textContent = "The new passwords do not match.";
                 errorMessage.hidden = false;
                 return;
             }
@@ -166,7 +166,7 @@ window.SafeVaultAuth = (() => {
 
                 if (!response.ok) {
                     const result = await response.json().catch(() => ({}));
-                    errorMessage.textContent = result.message ?? "Das Passwort konnte nicht geändert werden.";
+                    errorMessage.textContent = result.message ?? "The password could not be changed.";
                     errorMessage.hidden = false;
                     return;
                 }
@@ -175,9 +175,9 @@ window.SafeVaultAuth = (() => {
                 form.reset();
                 const statusMessage = document.getElementById("account-status");
                 statusMessage.classList.remove("error");
-                statusMessage.textContent = "Das Passwort wurde geändert.";
+                statusMessage.textContent = "The password has been changed.";
             } catch {
-                errorMessage.textContent = "SafeVault ist momentan nicht erreichbar.";
+                errorMessage.textContent = "SafeVault is currently unavailable.";
                 errorMessage.hidden = false;
             } finally {
                 submitButton.disabled = false;
@@ -209,7 +209,7 @@ window.SafeVaultAuth = (() => {
             submitButton.disabled = true;
             deleteButton.disabled = true;
             statusMessage.classList.remove("error");
-            statusMessage.textContent = "Konto wird gelöscht …";
+            statusMessage.textContent = "Deleting account …";
 
             try {
                 const formData = new FormData(form);
@@ -225,7 +225,7 @@ window.SafeVaultAuth = (() => {
 
                 if (!response.ok) {
                     const result = await response.json().catch(() => ({}));
-                    errorMessage.textContent = result.message ?? "Das Konto konnte nicht gelöscht werden.";
+                    errorMessage.textContent = result.message ?? "The account could not be deleted.";
                     errorMessage.hidden = false;
                     statusMessage.textContent = "";
                     return;
@@ -233,7 +233,7 @@ window.SafeVaultAuth = (() => {
 
                 window.location.reload();
             } catch {
-                errorMessage.textContent = "SafeVault ist momentan nicht erreichbar.";
+                errorMessage.textContent = "SafeVault is currently unavailable.";
                 errorMessage.hidden = false;
                 statusMessage.textContent = "";
             } finally {

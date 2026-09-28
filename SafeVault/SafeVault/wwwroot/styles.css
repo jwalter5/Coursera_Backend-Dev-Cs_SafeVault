@@ -12,6 +12,10 @@ body {
     place-items: center;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 .card {
     width: min(100% - 2rem, 28rem);
     box-sizing: border-box;
