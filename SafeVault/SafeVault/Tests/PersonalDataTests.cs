@@ -69,10 +69,24 @@ public class PersonalDataTests
         var controller = CreateController(repository, admin);
         controller.Request.Headers["id"] = otherUser.UserID.ToString();
 
-        var result = controller.GetPersonalData();
+        var result = controller.ViewPersonalData(new ViewPersonalDataRequest("password"));
 
         var response = (result.Result as OkObjectResult)?.Value as PersonalDataResponse;
         Assert.That(response?.PersonalData, Is.EqualTo("admin secret"));
+    }
+
+    [Test]
+    public void ViewEndpointRejectsAnIncorrectPassword()
+    {
+        using var connection = CreateDatabase();
+        var repository = CreateRepository(connection);
+        var user = CreateUser(repository, "owner", "owner@example.com");
+        repository.SavePersonalData(user.UserID, "owner secret");
+        var controller = CreateController(repository, user);
+
+        var result = controller.ViewPersonalData(new ViewPersonalDataRequest("wrong-password"));
+
+        Assert.That(result.Result, Is.TypeOf<BadRequestObjectResult>());
     }
 
     [Test]

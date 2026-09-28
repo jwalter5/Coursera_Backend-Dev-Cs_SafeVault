@@ -28,13 +28,9 @@
                 <dt>Rolle</dt>
                 <dd id="role"></dd>
             </dl>
-            <form id="personal-data-form">
-                <label for="personal-data">Persönliche Daten</label>
-                <textarea id="personal-data" name="personalData" rows="7" maxlength="4096" aria-describedby="personal-data-help"></textarea>
-                <small id="personal-data-help">Nur du kannst diese verschlüsselten Daten lesen (maximal 4096 Zeichen).</small>
-                <button type="submit">Persönliche Daten speichern</button>
-                <p id="personal-data-status" class="status" role="status" aria-live="polite"></p>
-            </form>
+            <div class="actions">
+                <button id="open-personal-data" type="button">Persönliche Daten anzeigen</button>
+            </div>
             <nav id="admin-actions" class="actions" aria-label="Administration" hidden>
                 <a class="button" href="/admin.html">Benutzer verwalten</a>
             </nav>
@@ -46,6 +42,35 @@
             <p id="account-status" class="status" role="status" aria-live="polite"></p>
         </section>
     </main>
+
+    <dialog id="personal-data-unlock-dialog" aria-labelledby="personal-data-unlock-title">
+        <form id="unlock-personal-data-form">
+            <h2 id="personal-data-unlock-title">Persönliche Daten anzeigen</h2>
+            <p>Bestätige deine Identität mit deinem aktuellen Passwort.</p>
+
+            <label for="personal-data-password">Aktuelles Passwort</label>
+            <input type="password" id="personal-data-password" name="currentPassword" autocomplete="current-password" maxlength="128" required>
+
+            <p id="personal-data-unlock-error" class="error" role="alert" hidden></p>
+            <div class="dialog-actions">
+                <button id="cancel-personal-data-unlock" class="button-secondary" type="button">Abbrechen</button>
+                <button type="submit">Daten anzeigen</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="personal-data-dialog" aria-labelledby="personal-data-title">
+        <form id="personal-data-form">
+            <h2 id="personal-data-title">Persönliche Daten</h2>
+            <textarea id="personal-data" name="personalData" rows="10" maxlength="4096" aria-label="Persönliche Daten" aria-describedby="personal-data-help"></textarea>
+            <small id="personal-data-help">Nur du kannst diese verschlüsselten Daten lesen (maximal 4096 Zeichen).</small>
+            <p id="personal-data-status" class="status" role="status" aria-live="polite"></p>
+            <div class="dialog-actions">
+                <button id="close-personal-data" class="button-secondary" type="button">Schließen</button>
+                <button type="submit">Speichern</button>
+            </div>
+        </form>
+    </dialog>
 
     <dialog id="change-password-dialog" aria-labelledby="change-password-title">
         <form id="change-password-form">
@@ -83,7 +108,7 @@
             </div>
         </form>
     </dialog>
-    <script src="/auth.js"></script>
-    <script src="/index.js"></script>
+    <script src="/auth.js?v=3"></script>
+    <script src="/index.js?v=3"></script>
 </body>
 </html>

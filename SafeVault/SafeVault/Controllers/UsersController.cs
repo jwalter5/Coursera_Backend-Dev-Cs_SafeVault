@@ -145,14 +145,19 @@ public sealed class UsersController : ControllerBase
         return NoContent();
     }
 
-    [HttpGet("personal-data")]
-    public ActionResult<PersonalDataResponse> GetPersonalData()
+    [HttpPost("personal-data/view")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public ActionResult<PersonalDataResponse> ViewPersonalData(
+        [FromBody] ViewPersonalDataRequest request)
     {
         if (!TryGetCurrentUserId(out var currentUserId))
             return Unauthorized();
 
-        if (_userRepository.GetById(currentUserId) is null)
-            return Unauthorized();
+        if (!IsValidPasswordConfirmation(request.CurrentPassword)
+            || !_userRepository.VerifyPassword(currentUserId, request.CurrentPassword))
+        {
+            return BadRequest(new { message = "The current password is incorrect." });
+        }
 
         return Ok(new PersonalDataResponse(
             _userRepository.GetPersonalData(currentUserId) ?? string.Empty));
@@ -200,6 +205,7 @@ public sealed class UsersController : ControllerBase
 public sealed record DeleteUserRequest(string CurrentPassword);
 public sealed record UpdateUserRoleRequest(int UserId, string Role, string CurrentPassword);
 public sealed record ChangePasswordRequest(string OldPassword, string NewPassword);
+public sealed record ViewPersonalDataRequest(string CurrentPassword);
 public sealed record SavePersonalDataRequest(string PersonalData);
 public sealed record PersonalDataResponse(string PersonalData);
 public sealed record AdminUserResponse(int UserId, string Username, string Email, string Role)

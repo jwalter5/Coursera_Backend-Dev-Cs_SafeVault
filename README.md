@@ -33,8 +33,9 @@ Logged-in administrators can open `/admin.html` from the homepage to view all us
 change their roles. Role-based permissions follow the JWT and therefore change after the affected
 user logs in again.
 
-Personal data is read and saved through `GET` and `PUT /api/users/personal-data`. These routes
-always derive the record ID from the authenticated token and do not accept a target user ID.
+Personal data is read through `POST /api/users/personal-data/view` after confirming the current
+password and saved through `PUT /api/users/personal-data`. These routes always derive the record
+ID from the authenticated token and do not accept a target user ID.
 Consequently, administrators can manage only their own personal data and cannot retrieve another
 user's personal data. The value is encrypted before it is written to the database.
 

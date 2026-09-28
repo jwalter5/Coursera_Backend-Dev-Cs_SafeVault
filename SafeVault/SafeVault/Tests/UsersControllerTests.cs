@@ -20,7 +20,7 @@ public class UsersControllerTests
     [TestCase(nameof(UsersController.Delete))]
     [TestCase(nameof(UsersController.UpdateRole))]
     [TestCase(nameof(UsersController.ChangePassword))]
-    [TestCase(nameof(UsersController.GetPersonalData))]
+    [TestCase(nameof(UsersController.ViewPersonalData))]
     [TestCase(nameof(UsersController.SavePersonalData))]
     public async Task EveryEndpointDeniesAccessForUnauthenticatedUsers(string actionName)
     {
