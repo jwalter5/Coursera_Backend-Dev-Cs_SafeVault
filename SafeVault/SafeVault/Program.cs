@@ -154,3 +154,5 @@ app.MapControllers();
 app.Lifetime.ApplicationStopping.Register(databaseConnection.Dispose);
 
 app.Run();
+
+public partial class Program;
